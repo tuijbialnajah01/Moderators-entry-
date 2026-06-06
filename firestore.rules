@@ -9,55 +9,49 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && 
-             // We allow verified email OR bypass if using Google Provider which auto-verifies
-             // request.auth.token.email_verified == true &&
-             (request.auth.token.email == 'tuijbialnajah@gamil.com' ||
-              request.auth.token.email == 'tuijbialnajah@gmail.com' ||
-              request.auth.token.email == 'nadiaparveen1526@gmail.com' ||
-              request.auth.token.email == 'pintrestk11@gmail.com' ||
-              request.auth.token.email == 'kamronbazoz@gmail.com' ||
-              request.auth.token.email == 'kamranaliarts69@gmail.com');
+             (request.auth.token.email.lower() == 'tuijbialnajah@gmail.com' ||
+              request.auth.token.email.lower() == 'nadiaparveen1526@gmail.com' ||
+              request.auth.token.email.lower() == 'pintrestk11@gmail.com' ||
+              request.auth.token.email.lower() == 'kamronbazoz@gmail.com' ||
+              request.auth.token.email.lower() == 'kamranaliarts69@gmail.com');
     }
 
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     
     function isValidId(id) { 
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     function isValidModCreate(data) {
       return data.keys().hasAll(['name', 'lastEntryAt', 'deadlineAt', 'createdAt', 'updatedAt']) &&
-             data.keys().size() == 5 &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.name is string && data.name.size() > 0 && 
              data.lastEntryAt is number &&
              data.deadlineAt is number &&
              data.createdAt is number &&
              data.updatedAt is number;
     }
 
+    match /{path=**}/entries/{entryId} {
+      allow list: if true;
+    }
+
     match /mods/{modId} {
-      allow get: if isValidId(modId);
-      allow list: if true; 
+      allow get: if true;
+      allow list: if true;
       
-      allow create: if isAdmin() && 
-                    isValidId(modId) &&
-                    isValidModCreate(incoming());
+      allow create: if isAdmin() && isValidModCreate(incoming());
                     
       allow update: if isAdmin() &&
-                    isValidId(modId) &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'lastEntryAt', 'deadlineAt', 'updatedAt']) &&
-                    ( !('name' in incoming().diff(existing()).affectedKeys()) || (incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 100) ) &&
-                    ( !('lastEntryAt' in incoming().diff(existing()).affectedKeys()) || (incoming().lastEntryAt is number) ) &&
-                    ( !('deadlineAt' in incoming().diff(existing()).affectedKeys()) || (incoming().deadlineAt is number) ) &&
-                    ( !('updatedAt' in incoming().diff(existing()).affectedKeys()) || (incoming().updatedAt is number) );
+                    ( !('status' in incoming()) || incoming().status in ['active', 'blacklisted'] ) &&
+                    ( !('lastEntryAt' in incoming()) || incoming().lastEntryAt is number ) &&
+                    ( !('deadlineAt' in incoming()) || incoming().deadlineAt is number ) &&
+                    ( !('updatedAt' in incoming()) || incoming().updatedAt is number );
                     
-      allow delete: if isAdmin() && isValidId(modId);
+      allow delete: if isAdmin();
       
       match /entries/{entryId} {
-        allow get: if isValidId(modId) && isValidId(entryId);
-        allow list: if isValidId(modId);
+        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
         
         function isValidEntryCreate(data) {
           return data.keys().hasAll(['text', 'createdAt', 'createdBy']) &&

@@ -1,10 +1,12 @@
 export interface Mod {
   id: string;
   name: string;
+  phoneNumber?: string;
   lastEntryAt: number;
   deadlineAt: number;
   createdAt: number;
   updatedAt: number;
+  status?: 'active' | 'blacklisted';
 }
 
 export interface Entry {

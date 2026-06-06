@@ -9,7 +9,8 @@
         "lastEntryAt": { "type": "number", "description": "Timestamp of the last entry" },
         "deadlineAt": { "type": "number", "description": "Timestamp of the deadline (lastEntryAt + 7 days)" },
         "createdAt": { "type": "number" },
-        "updatedAt": { "type": "number" }
+        "updatedAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "blacklisted"] }
       },
       "required": ["name", "lastEntryAt", "deadlineAt", "createdAt", "updatedAt"]
     },
