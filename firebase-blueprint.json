@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Mod": {
+      "title": "Moderator",
+      "description": "A moderator user in the system.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "lastEntryAt": { "type": "number", "description": "Timestamp of the last entry" },
+        "deadlineAt": { "type": "number", "description": "Timestamp of the deadline (lastEntryAt + 7 days)" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["name", "lastEntryAt", "deadlineAt", "createdAt", "updatedAt"]
+    },
+    "Entry": {
+      "title": "Entry",
+      "description": "An entry created for a moderator.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["text", "createdAt", "createdBy"]
+    }
+  },
+  "firestore": {
+    "mods/{modId}": {
+      "schema": "Mod",
+      "description": "Collection of moderators."
+    },
+    "mods/{modId}/entries/{entryId}": {
+      "schema": "Entry",
+      "description": "Entries for a specific moderator."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Moderator Tracker",
+  "description": "A dashboard to track moderator activities and manage automated demotion timers via secure Firebase limits.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
