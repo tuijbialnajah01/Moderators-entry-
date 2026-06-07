@@ -8,6 +8,7 @@ export interface Mod {
   updatedAt: number;
   status?: 'active' | 'blacklisted';
   role?: 'moderator' | 'officer';
+  officerId?: string;
 }
 
 export interface Entry {

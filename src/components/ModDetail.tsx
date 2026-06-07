@@ -33,6 +33,10 @@ export function ModDetail() {
   const [editProfileError, setEditProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  const [allMods, setAllMods] = useState<Mod[]>([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
   useEffect(() => {
     if (!id) return;
 
@@ -61,9 +65,22 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.LIST, `mods/${id}/entries`);
     });
 
+    let unsubscribeAllMods = () => {};
+    if (isAdmin) {
+      const allModsRef = collection(db, 'mods');
+      unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
+        const fetchedMods: Mod[] = [];
+        snapshot.forEach((doc) => {
+          fetchedMods.push({ id: doc.id, ...doc.data() } as Mod);
+        });
+        setAllMods(fetchedMods);
+      });
+    }
+
     return () => {
       unsubscribeMod();
       unsubscribeEntries();
+      unsubscribeAllMods();
     };
   }, [id, user, isAdmin]);
 
@@ -223,6 +240,36 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.UPDATE, `mods/${id}`);
     } finally {
       setIsStatusUpdating(false);
+    }
+  };
+
+  const handleAssignModerator = async (modIdToAssign: string) => {
+    setIsAssigning(true);
+    try {
+      const modRef = doc(db, 'mods', modIdToAssign);
+      await updateDoc(modRef, {
+        officerId: id,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      console.error('Failed to assign moderator', error);
+      alert('Failed to assign moderator.');
+    } finally {
+      setIsAssigning(false);
+      setShowAssignModal(false);
+    }
+  };
+
+  const handleUnassignModerator = async (modIdToUnassign: string) => {
+    try {
+      const modRef = doc(db, 'mods', modIdToUnassign);
+      await updateDoc(modRef, {
+        officerId: null,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      console.error('Failed to unassign moderator', error);
+      alert('Failed to unassign moderator.');
     }
   };
 
@@ -418,47 +465,100 @@ export function ModDetail() {
           </div>
         </div>
         
-        {/* Log Area */}
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
-          <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
-             <h4 className="text-lg font-bold text-white">Entries Log</h4>
-          </div>
-          
-          <div className="flex-1 p-6">
-            {entries.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
-                 <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
-                 <p className="text-xs text-slate-500 mt-1">When entries are added, they will appear here.</p>
-              </div>
-            ) : (
-              <div className="pl-8 pr-2 py-2">
-                <ol reversed className="list-decimal list-outside space-y-6 text-slate-300 marker:text-slate-500 marker:font-bold">
-                  {entries.map((entry) => (
-                    <li key={entry.id} className="pl-2 border-b border-slate-800/50 pb-6 last:border-0 last:pb-0 relative group">
-                      <div className="flex flex-col gap-1.5">
-                        <span className="text-slate-200 font-medium whitespace-pre-wrap">{entry.text}</span>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-slate-400 font-mono text-xs bg-slate-950 inline-block px-2 py-1 rounded border border-slate-800">
-                            {new Date(entry.createdAt).toLocaleString()}
-                          </span>
-                          {isAdmin && (
-                            <button
-                              onClick={() => setEntryToDelete(entry.id)}
-                              className="text-slate-500 hover:text-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 p-1"
-                              title="Delete entry"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+        {/* Dependent Content Area */}
+        {mod.role === 'officer' ? (
+          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
+            <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
+               <h4 className="text-lg font-bold text-white">Managed Moderators</h4>
+               {isAdmin && (
+                 <button
+                   onClick={() => setShowAssignModal(true)}
+                   className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-semibold"
+                 >
+                   <Plus className="w-4 h-4" />
+                   Add Moderator
+                 </button>
+               )}
+            </div>
+            
+            <div className="flex-1 p-6 overflow-y-auto">
+              {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
+                <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
+                   <p className="text-sm text-slate-400 font-medium">No moderators assigned to this officer.</p>
+                   {isAdmin && <p className="text-xs text-slate-500 mt-1">Click "Add Moderator" to assign one.</p>}
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map(assignedMod => (
+                    <div key={assignedMod.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl">
+                      <div className="mb-3 sm:mb-0">
+                        <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-base sm:text-lg block">
+                          {assignedMod.name}
+                        </Link>
+                        {assignedMod.phoneNumber && (
+                          <div className="text-xs text-slate-500 font-mono mt-1">{assignedMod.phoneNumber}</div>
+                        )}
                       </div>
-                    </li>
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <CountdownTimer deadlineAt={assignedMod.deadlineAt} />
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleUnassignModerator(assignedMod.id)}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                            title="Unassign Moderator"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </ol>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
+            <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
+               <h4 className="text-lg font-bold text-white">Entries Log</h4>
+            </div>
+            
+            <div className="flex-1 p-6">
+              {entries.length === 0 ? (
+                <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
+                   <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
+                   <p className="text-xs text-slate-500 mt-1">When entries are added, they will appear here.</p>
+                </div>
+              ) : (
+                <div className="pl-8 pr-2 py-2">
+                  <ol reversed className="list-decimal list-outside space-y-6 text-slate-300 marker:text-slate-500 marker:font-bold">
+                    {entries.map((entry) => (
+                      <li key={entry.id} className="pl-2 border-b border-slate-800/50 pb-6 last:border-0 last:pb-0 relative group">
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-slate-200 font-medium whitespace-pre-wrap">{entry.text}</span>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-slate-400 font-mono text-xs bg-slate-950 inline-block px-2 py-1 rounded border border-slate-800">
+                              {new Date(entry.createdAt).toLocaleString()}
+                            </span>
+                            {isAdmin && (
+                              <button
+                                onClick={() => setEntryToDelete(entry.id)}
+                                className="text-slate-500 hover:text-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 p-1"
+                                title="Delete entry"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Footer System Info */}
         <div className="text-[10px] text-slate-400 flex justify-between uppercase tracking-tighter mt-2">
@@ -602,6 +702,54 @@ export function ModDetail() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Assign Moderator Modal */}
+      {showAssignModal && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-slate-950 bg-opacity-80 transition-opacity" onClick={() => setShowAssignModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-slate-900 text-left shadow-2xl transition-all w-full max-w-lg border border-slate-800 z-10 mx-auto flex flex-col max-h-[80vh]">
+              <div className="bg-slate-900 px-6 py-5 border-b border-slate-800">
+                <h3 className="text-xl font-bold leading-6 text-white">Assign Moderator</h3>
+                <p className="text-sm text-slate-400 mt-1">Select an unassigned active moderator to assign to this officer.</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-950">
+                {allMods.filter(m => !m.officerId && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
+                  <div className="text-center py-8">
+                     <p className="text-sm text-slate-400 font-medium">No available unassigned moderators found.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {allMods.filter(m => !m.officerId && m.role !== 'officer' && m.status !== 'blacklisted').map(unassignedMod => (
+                      <div key={unassignedMod.id} className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors">
+                        <div>
+                          <p className="font-bold text-white text-base">{unassignedMod.name}</p>
+                        </div>
+                        <button
+                          onClick={() => handleAssignModerator(unassignedMod.id)}
+                          disabled={isAssigning}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-semibold disabled:opacity-50"
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="bg-slate-800/50 px-6 py-4 flex flex-row-reverse border-t border-slate-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  className="inline-flex w-full justify-center rounded-lg border border-slate-700 bg-slate-800 px-5 py-2 text-sm font-semibold text-slate-300 shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

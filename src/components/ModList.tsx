@@ -445,11 +445,13 @@ export function ModList() {
                 <div className={`w-full md:w-80 flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-slate-900/50 grayscale opacity-75' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
                   <div className="flex-1 flex flex-col items-center justify-center p-6 min-h-[140px]">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'}`}>
-                      {mod.status === 'blacklisted' ? 'Timer Suspended' : mod.role === 'officer' ? 'No Timer' : 'Time Remaining'}
+                      {mod.status === 'blacklisted' ? 'Timer Suspended' : mod.role === 'officer' ? 'Moderators Managed' : 'Time Remaining'}
                     </p>
                     <div className="whitespace-nowrap flex justify-center w-full scale-110">
-                      {mod.status === 'blacklisted' || mod.role === 'officer' ? (
+                      {mod.status === 'blacklisted' ? (
                         <div className="text-slate-500 font-mono text-2xl font-bold">-- : -- : --</div>
+                      ) : mod.role === 'officer' ? (
+                        <div className="text-indigo-400 font-mono text-3xl font-bold">{mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length}</div>
                       ) : (
                         <CountdownTimer deadlineAt={mod.deadlineAt} />
                       )}

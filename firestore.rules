@@ -27,6 +27,7 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'lastEntryAt', 'deadlineAt', 'createdAt', 'updatedAt']) &&
              data.name is string && data.name.size() > 0 && 
              (!('role' in data) || data.role in ['moderator', 'officer']) &&
+             (!('officerId' in data) || data.officerId is string || data.officerId == null) &&
              data.lastEntryAt is number &&
              data.deadlineAt is number &&
              data.createdAt is number &&
@@ -46,6 +47,7 @@ service cloud.firestore {
       allow update: if isAdmin() &&
                     ( !('status' in incoming()) || incoming().status in ['active', 'blacklisted'] ) &&
                     ( !('role' in incoming()) || incoming().role in ['moderator', 'officer'] ) &&
+                    ( !('officerId' in incoming()) || incoming().officerId is string || incoming().officerId == null ) &&
                     ( !('lastEntryAt' in incoming()) || incoming().lastEntryAt is number ) &&
                     ( !('deadlineAt' in incoming()) || incoming().deadlineAt is number ) &&
                     ( !('updatedAt' in incoming()) || incoming().updatedAt is number );
