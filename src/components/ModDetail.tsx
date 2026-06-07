@@ -361,9 +361,9 @@ export function ModDetail() {
       </header>
 
       {/* Content Area */}
-      <div className="p-4 sm:p-8 flex-1 flex flex-col gap-4 sm:gap-6 max-w-5xl mx-auto w-full overflow-y-auto pb-10">
+      <div className="p-4 sm:p-8 flex-1 max-w-5xl mx-auto w-full overflow-y-auto pb-10 space-y-4 sm:space-y-6">
         {/* Profile Card */}
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex flex-col md:flex-row">
+        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex flex-col md:flex-row shrink-0">
           <div className="p-6 md:p-8 flex-1 border-b md:border-b-0 md:border-r border-slate-800">
             <div className="flex flex-col mb-4 gap-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -467,7 +467,7 @@ export function ModDetail() {
         
         {/* Dependent Content Area */}
         {mod.role === 'officer' && (
-          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col mb-6">
+          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden shrink-0 flex flex-col">
             <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
                <h4 className="text-lg font-bold text-white">Managed Moderators</h4>
                {isAdmin && (
@@ -481,7 +481,7 @@ export function ModDetail() {
                )}
             </div>
             
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="p-6">
               {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
                 <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
                    <p className="text-sm text-slate-400 font-medium">No moderators assigned to this officer.</p>
@@ -519,12 +519,12 @@ export function ModDetail() {
           </div>
         )}
         
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
+        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden shrink-0 flex flex-col">
           <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
              <h4 className="text-lg font-bold text-white">Entries Log</h4>
           </div>
           
-          <div className="flex-1 p-6">
+          <div className="p-6">
             {entries.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
                  <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
