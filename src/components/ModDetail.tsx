@@ -4,7 +4,7 @@ import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, w
 import { db } from '../lib/firebase';
 import { Mod, Entry, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
-import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -17,6 +17,7 @@ export function ModDetail() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   
   const [showEntryModal, setShowEntryModal] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [entryText, setEntryText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,6 +28,8 @@ export function ModDetail() {
   // Edit Profile state
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ show: boolean, action: 'active' | 'blacklisted' }>({ show: false, action: 'active' });
+  const [roleConfirmModal, setRoleConfirmModal] = useState<{ show: boolean, action: 'promote' | 'demote' }>({ show: false, action: 'promote' });
+  const [isRoleUpdating, setIsRoleUpdating] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [editProfileName, setEditProfileName] = useState('');
   const [editProfilePhone, setEditProfilePhone] = useState('');
@@ -243,6 +246,49 @@ export function ModDetail() {
     }
   };
 
+  const handleRoleChange = async (action: 'promote' | 'demote') => {
+    if (!id || !isAdmin) return;
+    setRoleConfirmModal({ show: true, action });
+  };
+
+  const executeRoleChange = async () => {
+    if (!id || !isAdmin || isRoleUpdating) return;
+    const { action } = roleConfirmModal;
+
+    setIsRoleUpdating(true);
+    try {
+      const newRole = action === 'promote' ? 'officer' : 'moderator';
+      
+      // If demoting from officer to moderator, optionally unassign managed mods?
+      // For now, let's just update the role. Managed mods still ref this ID, but this person is no longer an officer.
+      // So let's clear the officerId from all managed mods if they are demoted.
+      if (action === 'demote') {
+        const managedMods = allMods.filter(m => m.officerId === id);
+        if (managedMods.length > 0) {
+          const batch = writeBatch(db);
+          managedMods.forEach(m => {
+            const modRef = doc(db, 'mods', m.id);
+            batch.update(modRef, { officerId: null, updatedAt: Date.now() });
+          });
+          await batch.commit();
+        }
+      }
+
+      await updateDoc(doc(db, 'mods', id), {
+        role: newRole,
+        updatedAt: Date.now(),
+      });
+      
+      setRoleConfirmModal({ show: false, action: 'promote' });
+    } catch (error) {
+      console.error("Failed to update role:", error);
+      alert("Failed to update role. Check your connection or permissions.");
+      handleFirestoreError(error, OperationType.UPDATE, `mods/${id}`);
+    } finally {
+      setIsRoleUpdating(false);
+    }
+  };
+
   const handleAssignModerator = async (modIdToAssign: string) => {
     setIsAssigning(true);
     try {
@@ -280,9 +326,9 @@ export function ModDetail() {
   if (!mod || (mod.status === 'blacklisted' && !isAdmin)) {
     return (
       <div className="flex flex-col h-full bg-slate-950">
-        <header className="h-14 sm:h-16 bg-slate-900 border-b border-slate-800 flex items-center px-4 sm:px-8 flex-shrink-0">
-          <Link to="/" className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors">
-             <ArrowLeft className="w-4 h-4" /> Back to Reports
+        <header className="h-28 sm:h-32 bg-slate-900 border-b border-slate-800 flex items-center px-6 sm:px-16 flex-shrink-0">
+          <Link to="/" className="text-slate-400 hover:text-white flex items-center gap-4 text-3xl sm:text-4xl font-semibold transition-colors">
+             <ArrowLeft className="w-12 h-12" /> Back to Reports
           </Link>
         </header>
         <div className="flex-1 p-8">
@@ -337,26 +383,89 @@ export function ModDetail() {
             </motion.div>
           </div>
         )}
+
+        {roleConfirmModal.show && (
+           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${roleConfirmModal.action === 'demote' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                  {roleConfirmModal.action === 'demote' ? <AlertTriangle className="w-8 h-8" /> : <ShieldCheck className="w-8 h-8" />}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                    {roleConfirmModal.action === 'promote' ? 'Promote to Officer?' : 'Demote to Moderator?'}
+                  </h3>
+                  <p className="text-slate-400 text-sm mb-6">
+                    {roleConfirmModal.action === 'promote' 
+                      ? `Are you sure you want to promote ${mod.name} to an Officer? They will be able to manage moderators.`
+                      : `Are you sure you want to demote ${mod.name} to a Moderator? Any assigned moderators will be unassigned.`}
+                  </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setRoleConfirmModal({ show: false, action: 'promote' })}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={executeRoleChange}
+                    disabled={isRoleUpdating}
+                    className={`flex-1 px-4 py-2.5 rounded-xl text-white font-bold transition-all active:scale-95 shadow-lg flex items-center justify-center ${roleConfirmModal.action === 'demote' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20'} disabled:opacity-50`}
+                  >
+                    {isRoleUpdating ? 'Processing...' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Top Header */}
-      <header className="h-14 sm:h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sm:px-8 flex-shrink-0 z-10">
+      <header className="h-28 sm:h-32 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sm:px-16 flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm font-semibold transition-colors">
-            <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Back to Reports</span><span className="inline sm:hidden">Back</span>
+          <Link to="/" className="text-slate-400 hover:text-indigo-400 flex items-center gap-4 text-3xl sm:text-4xl font-semibold transition-colors">
+            <ArrowLeft className="w-12 h-12" /> <span className="hidden sm:inline">Back to Reports</span><span className="inline sm:hidden">Back</span>
           </Link>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          {isAdmin && (
-            <button 
-              onClick={() => setShowEntryModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1 sm:gap-2 transition-colors"
-            >
-              <svg className="w-4 h-4 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              <span className="hidden sm:inline">Create New Entry</span>
-              <span className="inline sm:hidden">New Entry</span>
-            </button>
-          )}
+        <div className="relative">
+          <button 
+            onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+            className="p-4 sm:p-5 rounded-2xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all border border-slate-700"
+          >
+            <Menu className="w-8 h-8 sm:w-12 sm:h-12" />
+          </button>
+
+          <AnimatePresence>
+            {showHeaderMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[20]" 
+                  onClick={() => setShowHeaderMenu(false)}
+                ></div>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
+                >
+                  {isAdmin && (
+                    <button 
+                      onClick={() => { setShowEntryModal(true); setShowHeaderMenu(false); }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-sm w-full"
+                    >
+                      <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                      <span>Create New Entry</span>
+                    </button>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
@@ -368,13 +477,13 @@ export function ModDetail() {
             <div className="flex flex-col mb-4 gap-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                  <div className="flex items-center gap-3">
-                    <h3 className="text-3xl font-bold text-white flex-shrink-0">{mod.name}</h3>
+                    <h3 className="text-4xl sm:text-5xl font-bold text-white flex-shrink-0">{mod.name}</h3>
                     {mod.status === 'blacklisted' && (
                       <span className="bg-red-600/20 text-red-500 text-xs font-bold uppercase px-3 py-1 rounded-lg border border-red-600/30">Blacklisted</span>
                     )}
                  </div>
                  {isAdmin && (
-                    <div className="flex gap-2">
+                     <div className="flex gap-2">
                       {mod.status === 'blacklisted' ? (
                         <button 
                           onClick={() => handleStatusChange('active')}
@@ -390,6 +499,23 @@ export function ModDetail() {
                           Add to Blacklist
                         </button>
                       )}
+                      
+                      {mod.role === 'officer' ? (
+                        <button 
+                          onClick={() => handleRoleChange('demote')}
+                          className="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 rounded-lg transition-colors border border-amber-600/30 flex items-center gap-2 text-xs sm:text-sm font-bold"
+                        >
+                          Demote to Mod
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleRoleChange('promote')}
+                          className="px-3 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg transition-colors border border-blue-600/30 flex items-center gap-2 text-xs sm:text-sm font-bold"
+                        >
+                          Promote to Officer
+                        </button>
+                      )}
+
                       <button 
                         onClick={() => { 
                           setShowEditProfileModal(true); 
@@ -492,7 +618,7 @@ export function ModDetail() {
                   {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map(assignedMod => (
                     <div key={assignedMod.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl">
                       <div className="mb-3 sm:mb-0">
-                        <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-base sm:text-lg block">
+                        <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-xl sm:text-2xl block">
                            {assignedMod.name}
                         </Link>
                         {assignedMod.phoneNumber && (
@@ -561,7 +687,7 @@ export function ModDetail() {
         </div>
         
         {/* Footer System Info */}
-        <div className="text-[10px] text-slate-400 flex justify-between uppercase tracking-tighter mt-2">
+        <div className="text-[5px] text-slate-400 flex justify-between uppercase tracking-tighter mt-2">
           <span>Profile View Active</span>
           <span>Log Count: {entries.length}</span>
         </div>
@@ -727,7 +853,7 @@ export function ModDetail() {
                     {allMods.filter(m => !m.officerId && m.role !== 'officer' && m.status !== 'blacklisted').map(unassignedMod => (
                       <div key={unassignedMod.id} className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors">
                         <div>
-                          <p className="font-bold text-white text-base">{unassignedMod.name}</p>
+                          <p className="font-bold text-white text-xl sm:text-2xl">{unassignedMod.name}</p>
                         </div>
                         <button
                           onClick={() => handleAssignModerator(unassignedMod.id)}
