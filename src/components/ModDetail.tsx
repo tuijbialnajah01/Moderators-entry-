@@ -466,8 +466,8 @@ export function ModDetail() {
         </div>
         
         {/* Dependent Content Area */}
-        {mod.role === 'officer' ? (
-          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
+        {mod.role === 'officer' && (
+          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col mb-6">
             <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
                <h4 className="text-lg font-bold text-white">Managed Moderators</h4>
                {isAdmin && (
@@ -493,7 +493,7 @@ export function ModDetail() {
                     <div key={assignedMod.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl">
                       <div className="mb-3 sm:mb-0">
                         <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-base sm:text-lg block">
-                          {assignedMod.name}
+                           {assignedMod.name}
                         </Link>
                         {assignedMod.phoneNumber && (
                           <div className="text-xs text-slate-500 font-mono mt-1">{assignedMod.phoneNumber}</div>
@@ -517,48 +517,48 @@ export function ModDetail() {
               )}
             </div>
           </div>
-        ) : (
-          <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
-            <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
-               <h4 className="text-lg font-bold text-white">Entries Log</h4>
-            </div>
-            
-            <div className="flex-1 p-6">
-              {entries.length === 0 ? (
-                <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
-                   <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
-                   <p className="text-xs text-slate-500 mt-1">When entries are added, they will appear here.</p>
-                </div>
-              ) : (
-                <div className="pl-8 pr-2 py-2">
-                  <ol reversed className="list-decimal list-outside space-y-6 text-slate-300 marker:text-slate-500 marker:font-bold">
-                    {entries.map((entry) => (
-                      <li key={entry.id} className="pl-2 border-b border-slate-800/50 pb-6 last:border-0 last:pb-0 relative group">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-slate-200 font-medium whitespace-pre-wrap">{entry.text}</span>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-slate-400 font-mono text-xs bg-slate-950 inline-block px-2 py-1 rounded border border-slate-800">
-                              {new Date(entry.createdAt).toLocaleString()}
-                            </span>
-                            {isAdmin && (
-                              <button
-                                onClick={() => setEntryToDelete(entry.id)}
-                                className="text-slate-500 hover:text-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 p-1"
-                                title="Delete entry"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </div>
-          </div>
         )}
+        
+        <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden flex-1 flex flex-col">
+          <div className="px-6 py-5 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
+             <h4 className="text-lg font-bold text-white">Entries Log</h4>
+          </div>
+          
+          <div className="flex-1 p-6">
+            {entries.length === 0 ? (
+              <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
+                 <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
+                 <p className="text-xs text-slate-500 mt-1">When entries are added, they will appear here.</p>
+              </div>
+            ) : (
+              <div className="pl-8 pr-2 py-2">
+                <ol reversed className="list-decimal list-outside space-y-6 text-slate-300 marker:text-slate-500 marker:font-bold">
+                  {entries.map((entry) => (
+                    <li key={entry.id} className="pl-2 border-b border-slate-800/50 pb-6 last:border-0 last:pb-0 relative group">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-slate-200 font-medium whitespace-pre-wrap">{entry.text}</span>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-slate-400 font-mono text-xs bg-slate-950 inline-block px-2 py-1 rounded border border-slate-800">
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </span>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEntryToDelete(entry.id)}
+                              className="text-slate-500 hover:text-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 p-1"
+                              title="Delete entry"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* Footer System Info */}
         <div className="text-[10px] text-slate-400 flex justify-between uppercase tracking-tighter mt-2">
