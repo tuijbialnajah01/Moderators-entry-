@@ -662,9 +662,13 @@ export function ModList() {
                         </p>
                       </div>
 
-                      <div className="mt-8 pt-8 border-t border-slate-800">
+                      <div className="mt-8 pt-8 border-t border-slate-800 space-y-4">
                         <p className="font-mono font-bold text-indigo-300 text-center bg-indigo-500/10 p-4 sm:p-6 rounded-xl border border-indigo-500/30 shadow-inner">
                           ——&gt;Any one of the above contributions is sufficient to remain an active moderator&lt;——
+                        </p>
+                        <p className="text-sm font-medium text-amber-300 bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 text-center flex flex-col sm:flex-row items-center justify-center gap-3">
+                          <span className="shrink-0 bg-amber-500 text-amber-950 px-2 py-1 rounded text-xs uppercase tracking-bold font-black">Note</span>
+                          <span className="leading-relaxed">Regardless of the number of entries you register, your active status timer will always reset from the exact time of your last entry.</span>
                         </p>
                       </div>
                     </>
