@@ -240,7 +240,7 @@ export function ModDetail() {
         </header>
         <div className="flex-1 p-8">
           <div className="bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-800 text-center">
-              <h2 className="text-xl font-bold text-white">Moderator Not Found</h2>
+              <h2 className="text-xl font-bold text-white">Member Not Found</h2>
           </div>
         </div>
       </div>
@@ -264,13 +264,13 @@ export function ModDetail() {
                   {confirmModal.action === 'blacklisted' ? <AlertTriangle className="w-8 h-8" /> : <ShieldCheck className="w-8 h-8" />}
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">
-                  {confirmModal.action === 'blacklisted' ? 'Blacklist Moderator?' : 'Re-Hire Moderator?'}
-                </h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  {confirmModal.action === 'blacklisted' 
-                    ? 'Are you sure you want to blacklist this moderator? They will no longer be visible to regular users.'
-                    : 'This will restore the moderator and reset their activity timer to 7 days starting from now.'}
-                </p>
+                    {confirmModal.action === 'blacklisted' ? `Blacklist ${mod.role === 'officer' ? 'Officer' : 'Moderator'}?` : `Re-Hire ${mod.role === 'officer' ? 'Officer' : 'Moderator'}?`}
+                  </h3>
+                  <p className="text-slate-400 text-sm mb-6">
+                    {confirmModal.action === 'blacklisted' 
+                      ? `Are you sure you want to blacklist this ${mod.role === 'officer' ? 'officer' : 'moderator'}? They will no longer be visible to regular users.`
+                      : `This will restore the ${mod.role === 'officer' ? 'officer' : 'moderator'} and reset their activity timer to 7 days starting from now.`}
+                  </p>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setConfirmModal({ show: false, action: 'active' })}
@@ -333,7 +333,7 @@ export function ModDetail() {
                           onClick={() => handleStatusChange('active')}
                           className="px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-500 rounded-lg transition-colors border border-emerald-500/50 flex items-center gap-2 text-xs sm:text-sm font-bold shadow-lg shadow-emerald-900/20"
                         >
-                          Re-Hire Moderator
+                          Re-Hire
                         </button>
                       ) : (
                         <button 
@@ -388,7 +388,7 @@ export function ModDetail() {
               </div>
             </div>
 
-            <p className="text-sm text-slate-400 mb-4 font-medium uppercase tracking-wider">Moderator Profile</p>
+            <p className="text-sm text-slate-400 mb-4 font-medium uppercase tracking-wider">{mod.role === 'officer' ? 'Officer Profile' : 'Moderator Profile'}</p>
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <span className={`w-2 h-2 rounded-full ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
               Last Entry: <span className="font-semibold text-white">{new Date(mod.lastEntryAt).toLocaleString()}</span>
@@ -398,15 +398,20 @@ export function ModDetail() {
               Total Entries: <span className="font-semibold text-white">{entries.length}</span>
             </div>
           </div>
-          <div className={`p-6 md:p-8 flex flex-col items-center justify-center border-t md:border-t-0 border-slate-800 ${mod.status === 'blacklisted' ? 'bg-slate-900/50' : 'bg-slate-950/50'}`}>
+          <div className={`p-6 md:p-8 flex flex-col items-center justify-center border-t md:border-t-0 border-slate-800 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-slate-900/50' : 'bg-slate-950/50'}`}>
             <p className="text-xs uppercase tracking-widest font-bold mb-3 text-slate-500">
-              {mod.status === 'blacklisted' ? 'Account Status' : 'Time Remaining'}
+              {mod.status === 'blacklisted' ? 'Account Status' : mod.role === 'officer' ? 'Role' : 'Time Remaining'}
             </p>
             {mod.status === 'blacklisted' ? (
               <div className="text-red-500 font-bold text-center px-6 py-4 border border-red-500/20 rounded-xl bg-red-500/5">
                 <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
                 <span className="text-xl uppercase tracking-tighter">Blacklisted</span>
               </div>
+            ) : mod.role === 'officer' ? (
+               <div className="text-slate-400 font-bold text-center px-6 py-4 border border-slate-700/50 rounded-xl bg-slate-800/30">
+                 <ShieldCheck className="w-8 h-8 mx-auto mb-2" />
+                 <span className="text-xl uppercase tracking-tighter">Officer</span>
+               </div>
             ) : (
               <CountdownTimer deadlineAt={mod.deadlineAt} />
             )}
@@ -422,7 +427,7 @@ export function ModDetail() {
           <div className="flex-1 p-6">
             {entries.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
-                 <p className="text-sm text-slate-400 font-medium">No entries recorded for this moderator.</p>
+                 <p className="text-sm text-slate-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
                  <p className="text-xs text-slate-500 mt-1">When entries are added, they will appear here.</p>
               </div>
             ) : (
@@ -558,7 +563,7 @@ export function ModDetail() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Moderator Name</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">{mod.role === 'officer' ? 'Officer Name' : 'Moderator Name'}</label>
                       <input
                         type="text"
                         className="block w-full rounded-lg border-slate-700 bg-slate-950 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3 border"

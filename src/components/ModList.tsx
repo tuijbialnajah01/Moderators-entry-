@@ -5,7 +5,7 @@ import { Mod, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type SortMode = 'ranking' | 'timeLeft';
@@ -26,6 +26,10 @@ export function ModList() {
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [addModError, setAddModError] = useState('');
   const [confirmModal, setConfirmModal] = useState<{ show: boolean; modId: string; action: 'active' | 'blacklisted' }>({ show: false, modId: '', action: 'active' });
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [modRoleView, setModRoleView] = useState<'moderator' | 'officer'>('moderator');
+  const [newModRole, setNewModRole] = useState<'moderator' | 'officer'>('moderator');
+  const [termsRoleView, setTermsRoleView] = useState<'moderator' | 'officer'>('moderator');
 
   useEffect(() => {
     // Regular users can only see active mods.
@@ -82,34 +86,35 @@ export function ModList() {
       return;
     }
 
-    const targetName = newModName.trim().toLowerCase();
-    const isDuplicate = mods.some(mod => mod.name.toLowerCase() === targetName);
+      const targetName = newModName.trim().toLowerCase();
+      const isDuplicate = mods.some(mod => mod.name.toLowerCase() === targetName && (mod.role || 'moderator') === newModRole);
 
-    if (isDuplicate) {
-      setAddModError('A moderator with this name already exists.');
-      return;
-    }
+      if (isDuplicate) {
+        setAddModError(`A ${newModRole} with this name already exists.`);
+        return;
+      }
 
-    setIsSubmitting(true);
-    setAddModError('');
-    try {
-      const now = Date.now();
-      const modId = crypto.randomUUID();
-      const docRef = doc(db, 'mods', modId);
-      
-      await setDoc(docRef, {
-        name: newModName.trim(),
-        phoneNumber: newModPhone.trim(),
-        lastEntryAt: now,
-        deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
-        createdAt: now,
-        updatedAt: now,
-        status: 'active',
-      });
+      setIsSubmitting(true);
+      setAddModError('');
+      try {
+        const now = Date.now();
+        const modId = crypto.randomUUID();
+        const docRef = doc(db, 'mods', modId);
+        
+        await setDoc(docRef, {
+          name: newModName.trim(),
+          phoneNumber: newModPhone.trim(),
+          lastEntryAt: now,
+          deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
+          createdAt: now,
+          updatedAt: now,
+          status: 'active',
+          role: newModRole,
+        });
 
-      setNewModName('');
-      setNewModPhone('');
-      setShowAddModal(false);
+        setNewModName('');
+        setNewModPhone('');
+        setShowAddModal(false);
     } catch (error) {
        console.error("Failed to add mod:", error);
        alert("Failed to add mod. Make sure you are an admin.");
@@ -166,7 +171,8 @@ export function ModList() {
   const rankedMods = useMemo(() => {
     let filtered = mods.filter(mod => {
       const status = mod.status || 'active';
-      return status === viewMode;
+      const role = mod.role || 'moderator';
+      return status === viewMode && role === modRoleView;
     });
 
     let list = filtered.map(mod => ({ ...mod, entryCount: entriesMap[mod.id] || 0 }));
@@ -183,7 +189,7 @@ export function ModList() {
     }
     
     return list;
-  }, [mods, entriesMap, sortMode, viewMode]);
+  }, [mods, entriesMap, sortMode, viewMode, modRoleView]);
 
   return (
     <div className="flex flex-col h-full bg-slate-950 overflow-hidden">
@@ -271,41 +277,87 @@ export function ModList() {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto w-full p-3 sm:p-8">
-        <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:inline-block mr-2">Sort</span>
-            <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
-              <button 
-                onClick={() => setSortMode('ranking')}
-                className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 font-bold transition-all ${sortMode === 'ranking' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-              >
-                <Trophy className="w-3.5 h-3.5" /> Ranking
-              </button>
-              <button 
-                onClick={() => setSortMode('timeLeft')}
-                className={`px-4 py-1.5 rounded-lg text-xs flex items-center gap-1.5 font-bold transition-all ${sortMode === 'timeLeft' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-              >
-                <Clock className="w-3.5 h-3.5" /> Most Time Left
-              </button>
-            </div>
+        <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl mb-4 sm:mb-0 w-full sm:w-auto">
+             <button
+                onClick={() => setModRoleView('moderator')}
+                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${modRoleView === 'moderator' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+             >
+                Moderators
+             </button>
+             <button
+                onClick={() => setModRoleView('officer')}
+                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${modRoleView === 'officer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+             >
+                Officers
+             </button>
           </div>
 
-          {isAdmin && (
-            <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
-              <button 
-                onClick={() => setViewMode('active')}
-                className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 font-bold transition-all ${viewMode === 'active' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-              >
-                Active
-              </button>
-              <button 
-                onClick={() => setViewMode('blacklisted')}
-                className={`px-4 py-1.5 rounded-lg text-xs flex items-center gap-1.5 font-bold transition-all ${viewMode === 'blacklisted' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
-              >
-                Blacklisted
-              </button>
-            </div>
-          )}
+          <div className="relative self-end sm:self-auto">
+            <button 
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all font-bold text-sm shadow-sm"
+            >
+              <Filter className="w-4 h-4 text-indigo-400" />
+              <span>Filters & Sort</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {showFilterDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[20]" 
+                    onClick={() => setShowFilterDropdown(false)}
+                  ></div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[30] p-2"
+                  >
+                    {isAdmin && (
+                      <div className="mb-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2">Status View</p>
+                        <button 
+                          onClick={() => { setViewMode('active'); setShowFilterDropdown(false); }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${viewMode === 'active' ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        >
+                          <span className="flex items-center gap-2 font-bold text-sm">Active {modRoleView === 'moderator' ? 'Moderators' : 'Officers'}</span>
+                          {viewMode === 'active' && <Check className="w-4 h-4" />}
+                        </button>
+                        <button 
+                          onClick={() => { setViewMode('blacklisted'); setShowFilterDropdown(false); }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${viewMode === 'blacklisted' ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        >
+                          <span className="flex items-center gap-2 font-bold text-sm">Blacklisted</span>
+                          {viewMode === 'blacklisted' && <Check className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className={isAdmin ? "pt-2 border-t border-slate-800/50" : ""}>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2">Sort By</p>
+                      <button 
+                        onClick={() => { setSortMode('ranking'); setShowFilterDropdown(false); }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${sortMode === 'ranking' ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                      >
+                        <span className="flex items-center gap-2 font-bold text-sm"><Trophy className="w-4 h-4" /> Ranking</span>
+                        {sortMode === 'ranking' && <Check className="w-4 h-4" />}
+                      </button>
+                      <button 
+                        onClick={() => { setSortMode('timeLeft'); setShowFilterDropdown(false); }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${sortMode === 'timeLeft' ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                      >
+                        <span className="flex items-center gap-2 font-bold text-sm"><Clock className="w-4 h-4" /> Time Left</span>
+                        {sortMode === 'timeLeft' && <Check className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:gap-6 w-full max-w-4xl mx-auto pb-10">
@@ -313,18 +365,18 @@ export function ModList() {
             <div className="col-span-full h-40 rounded-2xl bg-slate-800/50 animate-pulse"></div>
           ) : rankedMods.length === 0 ? (
             <div className="col-span-full p-8 sm:p-16 text-center text-slate-400 bg-slate-900 border border-dashed border-slate-700 rounded-2xl text-sm sm:text-base">
-               No moderators found in the system.
+               No {modRoleView}s found in the system.
             </div>
           ) : rankedMods.map((mod, index) => {
             const timeLeft = mod.deadlineAt - now;
-            const isCritical = timeLeft < 24 * 60 * 60 * 1000;
-            const isWarning = timeLeft < 3 * 24 * 60 * 60 * 1000;
+            const isCritical = mod.role === 'officer' ? false : timeLeft < 24 * 60 * 60 * 1000;
+            const isWarning = mod.role === 'officer' ? false : timeLeft < 3 * 24 * 60 * 60 * 1000;
             const totalMs = 7 * 24 * 60 * 60 * 1000;
-            const progress = Math.max(0, Math.min(100, (timeLeft / totalMs) * 100));
+            const progress = mod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeft / totalMs) * 100));
             const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
 
             return (
-              <div key={mod.id} className={`bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex flex-col md:flex-row overflow-hidden border-l-[4px] relative ${isCritical ? 'border-l-red-500' : isWarning ? 'border-l-amber-500' : 'border-l-emerald-500'} ${isTopRank ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950' : ''}`}>
+              <div key={mod.id} className={`bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex flex-col md:flex-row overflow-hidden border-l-[4px] relative ${mod.role === 'officer' ? 'border-l-indigo-500' : isCritical ? 'border-l-red-500' : isWarning ? 'border-l-amber-500' : 'border-l-emerald-500'} ${isTopRank ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950' : ''}`}>
                 <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -351,7 +403,9 @@ export function ModList() {
                       </p>
                       {mod.status !== 'blacklisted' && (
                         <>
-                          {isCritical ? (
+                          {mod.role === 'officer' ? (
+                            <span className="bg-indigo-500/10 text-indigo-400 text-[10px] sm:text-xs font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-indigo-500/20">Officer</span>
+                          ) : isCritical ? (
                             <span className="bg-red-500/10 text-red-400 text-[10px] sm:text-xs font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-red-500/20">Critical</span>
                           ) : isWarning ? (
                             <span className="bg-amber-500/10 text-amber-400 text-[10px] sm:text-xs font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-amber-500/20">Warning</span>
@@ -374,7 +428,7 @@ export function ModList() {
                             onClick={() => handleStatusChange(mod.id, 'active')}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
                           >
-                            Re-Hire Moderator
+                            Re-Hire
                           </button>
                        ) : (
                           <button 
@@ -388,13 +442,13 @@ export function ModList() {
                   )}
                 </div>
                 
-                <div className={`w-full md:w-80 flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${mod.status === 'blacklisted' ? 'bg-slate-900/50 grayscale opacity-75' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
+                <div className={`w-full md:w-80 flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-slate-900/50 grayscale opacity-75' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
                   <div className="flex-1 flex flex-col items-center justify-center p-6 min-h-[140px]">
-                    <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${mod.status === 'blacklisted' ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'}`}>
-                      {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
+                    <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'}`}>
+                      {mod.status === 'blacklisted' ? 'Timer Suspended' : mod.role === 'officer' ? 'No Timer' : 'Time Remaining'}
                     </p>
                     <div className="whitespace-nowrap flex justify-center w-full scale-110">
-                      {mod.status === 'blacklisted' ? (
+                      {mod.status === 'blacklisted' || mod.role === 'officer' ? (
                         <div className="text-slate-500 font-mono text-2xl font-bold">-- : -- : --</div>
                       ) : (
                         <CountdownTimer deadlineAt={mod.deadlineAt} />
@@ -404,8 +458,8 @@ export function ModList() {
                   <div className="p-4 border-t border-slate-800 bg-slate-900/50">
                     <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-1000 ${mod.status === 'blacklisted' ? 'bg-slate-700' : isCritical ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                        style={{ width: `${mod.status === 'blacklisted' ? 0 : progress}%` }}
+                        className={`h-full transition-all duration-1000 ${mod.status === 'blacklisted' || mod.role === 'officer' ? 'bg-slate-700' : isCritical ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                        style={{ width: `${mod.status === 'blacklisted' || mod.role === 'officer' ? 0 : progress}%` }}
                       />
                     </div>
                   </div>
@@ -437,9 +491,25 @@ export function ModList() {
               >
                 <form onSubmit={handleAddMod}>
                   <div className="bg-slate-900 px-6 pb-6 pt-6">
-                    <h3 className="text-xl font-bold leading-6 text-white mb-6">Create New Moderator</h3>
+                    <h3 className="text-xl font-bold leading-6 text-white mb-6">Create New Member</h3>
+                    <div className="flex gap-2 mb-6 p-1 rounded-xl bg-slate-950 border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => { setNewModRole('moderator'); setAddModError(''); }}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${newModRole === 'moderator' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+                      >
+                        Moderator
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setNewModRole('officer'); setAddModError(''); }}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${newModRole === 'officer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+                      >
+                        Officer
+                      </button>
+                    </div>
                     <div className="mt-2">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Moderator Name</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">{newModRole === 'moderator' ? 'Moderator' : 'Officer'} Name</label>
                       <input
                         type="text"
                         className={`block w-full rounded-lg border-slate-700 bg-slate-950 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3 border ${addModError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
@@ -470,7 +540,7 @@ export function ModList() {
                       disabled={isSubmitting || !newModName.trim() || !newModPhone.trim()}
                       className="inline-flex w-full justify-center rounded-lg border border-transparent bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50"
                     >
-                      {isSubmitting ? 'Creating...' : 'Create Moderator'}
+                      {isSubmitting ? 'Creating...' : `Create ${newModRole === 'moderator' ? 'Moderator' : 'Officer'}`}
                     </button>
                     <button
                       type="button"
@@ -512,72 +582,133 @@ export function ModList() {
                   </h3>
                 </div>
                 
+                <div className="bg-slate-950 px-6 py-4 border-b border-slate-800">
+                  <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-xl">
+                    <button
+                      onClick={() => setTermsRoleView('moderator')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${termsRoleView === 'moderator' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+                    >
+                      Moderators
+                    </button>
+                    <button
+                      onClick={() => setTermsRoleView('officer')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${termsRoleView === 'officer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+                    >
+                      Officers
+                    </button>
+                  </div>
+                </div>
+
                 <div className="p-6 overflow-y-auto flex-1 text-slate-300 text-sm sm:text-base space-y-8 min-h-[300px]">
-                  
-                  <div className="space-y-5">
-                    <div className="flex gap-3">
-                      <span className="font-bold text-indigo-400 text-lg">1.</span>
-                      <div className="space-y-4 pt-1">
-                        <p className="font-semibold text-white">Provide updates or reports :-</p>
-                        
-                        <div className="pl-2 sm:pl-4 space-y-4">
-                          <div>
-                            <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> user reports</p>
-                            <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400">
-                              <li className="flex items-center gap-2"><span className="text-indigo-500 font-bold">→</span> Bad behaviour of users</li>
-                              <li className="flex items-center gap-2"><span className="text-indigo-500 font-bold">→</span> unauthorised automation</li>
-                            </ul>
-                          </div>
+                  {termsRoleView === 'moderator' ? (
+                    <>
+                      <div className="space-y-5">
+                        <div className="flex gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">1.</span>
+                          <div className="space-y-4 pt-1">
+                            <p className="font-semibold text-white">Provide updates or reports :-</p>
+                            
+                            <div className="pl-2 sm:pl-4 space-y-4">
+                              <div>
+                                <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> user reports</p>
+                                <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400">
+                                  <li className="flex items-center gap-2"><span className="text-indigo-500 font-bold">→</span> Bad behaviour of users</li>
+                                  <li className="flex items-center gap-2"><span className="text-indigo-500 font-bold">→</span> unauthorised automation</li>
+                                </ul>
+                              </div>
 
-                          <div>
-                            <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Bot Broken Usages</p>
-                            <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400 border-l border-slate-800 ml-2">
-                              <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> <span className="leading-relaxed">Broken Usages will be counted only if they aren't recorded as &lt;in dev&gt; in <a href="https://usages-ls.vercel.app" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline font-medium mix-blend-plus-lighter">usages-ls.vercel.app</a></span></li>
-                            </ul>
-                          </div>
+                              <div>
+                                <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Bot Broken Usages</p>
+                                <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400 border-l border-slate-800 ml-2">
+                                  <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> <span className="leading-relaxed">Broken Usages will be counted only if they aren't recorded as &lt;in dev&gt; in <a href="https://usages-ls.vercel.app" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline font-medium mix-blend-plus-lighter">usages-ls.vercel.app</a></span></li>
+                                </ul>
+                              </div>
 
-                          <div>
-                            <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> user concerns / suggestions for Bot feature</p>
-                          </div>
+                              <div>
+                                <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> user concerns / suggestions for Bot feature</p>
+                              </div>
 
-                          <div>
-                            <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> community activity</p>
-                            <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400">
-                              <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> participate in community activity</li>
-                              <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> Make at least one group active for three days</li>
-                            </ul>
+                              <div>
+                                <p className="text-slate-200 font-medium flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> community activity</p>
+                                <ul className="pl-6 mt-1.5 space-y-1.5 text-slate-400">
+                                  <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> participate in community activity</li>
+                                  <li className="flex items-start gap-2"><span className="text-indigo-500 font-bold mt-0.5">→</span> Make at least one group active for three days</li>
+                                </ul>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 inline-block">
+                              <p className="text-sm font-bold text-amber-400 px-4 py-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                ( Any two of these )
+                              </p>
+                            </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="mt-4 inline-block">
-                          <p className="text-sm font-bold text-amber-400 px-4 py-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                            ( Any two of these )
+                      <div className="flex gap-3">
+                        <span className="font-bold text-indigo-400 text-lg">2.</span>
+                        <p className="pt-1 text-slate-200 leading-relaxed">
+                          Suggest new ideas or improvements that can benefit the community ( Specially By Mods )
+                        </p>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <span className="font-bold text-indigo-400 text-lg">3.</span>
+                        <p className="pt-1 text-slate-200 leading-relaxed">
+                           Help grow the community by bringing in new members (minimum 2)
+                        </p>
+                      </div>
+
+                      <div className="mt-8 pt-8 border-t border-slate-800">
+                        <p className="font-mono font-bold text-indigo-300 text-center bg-indigo-500/10 p-4 sm:p-6 rounded-xl border border-indigo-500/30 shadow-inner">
+                          ——&gt;Any one of the above contributions is sufficient to remain an active moderator&lt;——
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-6">
+                        <div className="flex items-start gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">1.</span>
+                          <p className="pt-1 text-slate-200 leading-relaxed">
+                            Monitor moderators in their job
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">2.</span>
+                          <p className="pt-1 text-slate-200 leading-relaxed">
+                            Always monitor the status of their bot because you don't know if the problem is coming from you
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">3.</span>
+                          <p className="pt-1 text-slate-200 leading-relaxed">
+                            Settle disputes between moderators
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">4.</span>
+                          <p className="pt-1 text-slate-200 leading-relaxed">
+                            Handle what the moderators can't handle
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <span className="font-bold text-indigo-400 text-lg">5.</span>
+                          <p className="pt-1 text-slate-200 leading-relaxed">
+                            Ensuring moderators are not abusing their power to harm others
                           </p>
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <span className="font-bold text-indigo-400 text-lg">2.</span>
-                    <p className="pt-1 text-slate-200 leading-relaxed">
-                      Suggest new ideas or improvements that can benefit the community ( Specially By Mods )
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <span className="font-bold text-indigo-400 text-lg">3.</span>
-                    <p className="pt-1 text-slate-200 leading-relaxed">
-                       Help grow the community by bringing in new members (minimum 2)
-                    </p>
-                  </div>
-
-                  <div className="mt-8 pt-8 border-t border-slate-800">
-                    <p className="font-mono font-bold text-indigo-300 text-center bg-indigo-500/10 p-4 sm:p-6 rounded-xl border border-indigo-500/30 shadow-inner">
-                      ——&gt;Any one of the above contributions is sufficient to remain an active moderator&lt;——
-                    </p>
-                  </div>
-
+                      
+                      <div className="mt-8 pt-8 border-t border-slate-800">
+                        <p className="font-mono font-bold text-amber-300 text-center bg-amber-500/10 p-4 sm:p-6 rounded-xl border border-amber-500/30 shadow-inner flex items-center justify-center gap-3">
+                          <ShieldCheck className="w-5 h-5" />
+                          Officers hold the highest accountability in upholding these standards.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div className="bg-slate-900 px-6 py-5 flex justify-center border-t border-slate-800 shrink-0">

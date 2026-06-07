@@ -7,6 +7,7 @@ export interface Mod {
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'blacklisted';
+  role?: 'moderator' | 'officer';
 }
 
 export interface Entry {

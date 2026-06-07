@@ -26,6 +26,7 @@ service cloud.firestore {
     function isValidModCreate(data) {
       return data.keys().hasAll(['name', 'lastEntryAt', 'deadlineAt', 'createdAt', 'updatedAt']) &&
              data.name is string && data.name.size() > 0 && 
+             (!('role' in data) || data.role in ['moderator', 'officer']) &&
              data.lastEntryAt is number &&
              data.deadlineAt is number &&
              data.createdAt is number &&
@@ -44,6 +45,7 @@ service cloud.firestore {
                     
       allow update: if isAdmin() &&
                     ( !('status' in incoming()) || incoming().status in ['active', 'blacklisted'] ) &&
+                    ( !('role' in incoming()) || incoming().role in ['moderator', 'officer'] ) &&
                     ( !('lastEntryAt' in incoming()) || incoming().lastEntryAt is number ) &&
                     ( !('deadlineAt' in incoming()) || incoming().deadlineAt is number ) &&
                     ( !('updatedAt' in incoming()) || incoming().updatedAt is number );
