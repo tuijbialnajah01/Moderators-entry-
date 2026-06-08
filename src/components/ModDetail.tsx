@@ -68,17 +68,14 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.LIST, `mods/${id}/entries`);
     });
 
-    let unsubscribeAllMods = () => {};
-    if (isAdmin) {
-      const allModsRef = collection(db, 'mods');
-      unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
-        const fetchedMods: Mod[] = [];
-        snapshot.forEach((doc) => {
-          fetchedMods.push({ id: doc.id, ...doc.data() } as Mod);
-        });
-        setAllMods(fetchedMods);
+    const allModsRef = collection(db, 'mods');
+    const unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
+      const fetchedMods: Mod[] = [];
+      snapshot.forEach((doc) => {
+        fetchedMods.push({ id: doc.id, ...doc.data() } as Mod);
       });
-    }
+      setAllMods(fetchedMods);
+    });
 
     return () => {
       unsubscribeMod();
@@ -180,16 +177,21 @@ export function ModDetail() {
     setEditProfileError('');
 
     try {
-      if (editProfileName.trim() !== mod.name) {
-        const q = query(collection(db, 'mods'));
-        const qs = await getDocs(q);
-        const isDuplicate = qs.docs.some(d => d.id !== id && d.data().name.toLowerCase() === editProfileName.trim().toLowerCase());
-        
-        if (isDuplicate) {
-           setEditProfileError('A moderator with this name already exists.');
-           setIsSavingProfile(false);
-           return;
-        }
+      const targetName = editProfileName.trim().toLowerCase();
+      const targetPhone = editProfilePhone.trim();
+      
+      const isDuplicateName = allMods.some(m => m.id !== id && m.name.toLowerCase() === targetName);
+      if (isDuplicateName) {
+        setEditProfileError('A moderator with this name already exists.');
+        setIsSavingProfile(false);
+        return;
+      }
+
+      const isDuplicatePhone = allMods.some(m => m.id !== id && m.phoneNumber === targetPhone);
+      if (isDuplicatePhone) {
+        setEditProfileError('This phone number is already registered to another user.');
+        setIsSavingProfile(false);
+        return;
       }
 
       await updateDoc(doc(db, 'mods', id), { 
@@ -614,32 +616,50 @@ export function ModDetail() {
                    {isAdmin && <p className="text-xs text-slate-500 mt-1">Click "Add Moderator" to assign one.</p>}
                 </div>
               ) : (
-                <div className="grid gap-3">
-                  {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map(assignedMod => (
-                    <div key={assignedMod.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl">
-                      <div className="mb-3 sm:mb-0">
-                        <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-xl sm:text-2xl block">
-                           {assignedMod.name}
-                        </Link>
-                        {assignedMod.phoneNumber && (
-                          <div className="text-xs text-slate-500 font-mono mt-1">{assignedMod.phoneNumber}</div>
-                        )}
+                <ol className="list-decimal list-inside space-y-3">
+                  {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map((assignedMod, idx) => {
+                    const now = Date.now();
+                    const timeLeftMs = assignedMod.deadlineAt - now;
+                    const isCritical = assignedMod.role === 'officer' ? false : timeLeftMs < 24 * 60 * 60 * 1000;
+                    const isWarning = assignedMod.role === 'officer' ? false : timeLeftMs < 3 * 24 * 60 * 60 * 1000;
+                    const totalMs = 7 * 24 * 60 * 60 * 1000;
+                    const progress = assignedMod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeftMs / totalMs) * 100));
+                    
+                    return (
+                    <li key={assignedMod.id} className="p-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 font-bold marker:text-slate-500 overflow-hidden relative">
+                      <div className="absolute top-0 left-0 h-1 bg-slate-800 w-full">
+                        <div 
+                          className={`h-full transition-all duration-1000 ease-in-out ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${progress}%` }}
+                        ></div>
                       </div>
-                      <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <CountdownTimer deadlineAt={assignedMod.deadlineAt} />
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleUnassignModerator(assignedMod.id)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
-                            title="Unassign Moderator"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full inline-flex align-top -ml-1 mt-1 sm:mt-0 pt-2">
+                        <div className="mb-3 sm:mb-0 ml-2">
+                          <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors text-xl sm:text-2xl block">
+                             {assignedMod.name}
+                          </Link>
+                          {assignedMod.phoneNumber && (
+                            <div className="text-xs text-slate-500 font-mono mt-1 font-normal">{assignedMod.phoneNumber}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 w-full sm:w-auto font-normal ml-2 sm:ml-0">
+                          <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-sm shadow-inner relative z-10">
+                            <CountdownTimer deadlineAt={assignedMod.deadlineAt} compact />
+                          </div>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleUnassignModerator(assignedMod.id)}
+                              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20 relative z-10"
+                              title="Unassign Moderator"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    </li>
+                  )})}
+                </ol>
               )}
             </div>
           </div>

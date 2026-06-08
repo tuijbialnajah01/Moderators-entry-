@@ -5,7 +5,7 @@ import { Mod, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu } from 'lucide-react';
+import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type SortMode = 'ranking' | 'timeLeft';
@@ -23,6 +23,7 @@ export function ModList() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [newModName, setNewModName] = useState('');
   const [newModPhone, setNewModPhone] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [addModError, setAddModError] = useState('');
@@ -88,10 +89,17 @@ export function ModList() {
     }
 
       const targetName = newModName.trim().toLowerCase();
-      const isDuplicate = mods.some(mod => mod.name.toLowerCase() === targetName && (mod.role || 'moderator') === newModRole);
+      const targetPhone = newModPhone.trim();
+      const isDuplicateName = mods.some(mod => mod.name.toLowerCase() === targetName && (mod.role || 'moderator') === newModRole);
+      const isDuplicatePhone = mods.some(mod => mod.phoneNumber === targetPhone);
 
-      if (isDuplicate) {
+      if (isDuplicateName) {
         setAddModError(`A ${newModRole} with this name already exists.`);
+        return;
+      }
+
+      if (isDuplicatePhone) {
+        setAddModError(`This phone number is already registered to another ${newModRole}.`);
         return;
       }
 
@@ -178,6 +186,20 @@ export function ModList() {
 
     let list = filtered.map(mod => ({ ...mod, entryCount: entriesMap[mod.id] || 0 }));
     
+    if (searchQuery.trim()) {
+      const normalizeText = (str: string) => {
+        return str
+          .normalize('NFKC')
+          .toLowerCase()
+          .replace(/[\u0300-\u036f]/g, '');
+      };
+      const q = normalizeText(searchQuery.trim());
+      list = list.filter(mod => 
+        normalizeText(mod.name).includes(q) || 
+        (mod.phoneNumber && mod.phoneNumber.includes(q))
+      );
+    }
+    
     if (sortMode === 'ranking') {
       list.sort((a, b) => {
         if (b.entryCount !== a.entryCount) {
@@ -190,7 +212,7 @@ export function ModList() {
     }
     
     return list;
-  }, [mods, entriesMap, sortMode, viewMode, modRoleView]);
+  }, [mods, entriesMap, sortMode, viewMode, modRoleView, searchQuery]);
 
   return (
     <div className="flex flex-col h-full bg-slate-950 overflow-hidden">
@@ -327,29 +349,40 @@ export function ModList() {
              </button>
           </div>
 
-          <div className="relative flex justify-end w-full">
-            <button 
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="flex items-center gap-4 px-8 py-5 sm:py-6 rounded-[2rem] bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all font-bold text-xl sm:text-2xl shadow-sm"
-            >
-              <Filter className="w-8 h-8 text-indigo-400" />
-              <span>Filters & Sort</span>
-              <ChevronDown className={`w-8 h-8 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
-            </button>
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+            <div className="relative w-full sm:flex-1">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-7 h-7 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search by name or number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-16 pr-6 py-5 sm:py-6 bg-slate-900 border border-slate-800 rounded-[2rem] text-xl sm:text-2xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm transition-all focus:bg-slate-800/80 placeholder:text-slate-500"
+              />
+            </div>
+            <div className="relative flex justify-end w-full sm:w-auto">
+              <button 
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center justify-center w-full sm:w-auto gap-4 px-8 py-5 sm:py-6 rounded-[2rem] bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all font-bold text-xl sm:text-2xl shadow-sm"
+              >
+                <Filter className="w-8 h-8 text-indigo-400" />
+                <span>Filters & Sort</span>
+                <ChevronDown className={`w-8 h-8 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+              </button>
 
-            <AnimatePresence>
-              {showFilterDropdown && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-[20]" 
-                    onClick={() => setShowFilterDropdown(false)}
-                  ></div>
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-4 w-96 bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl z-[30] p-4"
-                  >
+              <AnimatePresence>
+                {showFilterDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-[20]" 
+                      onClick={() => setShowFilterDropdown(false)}
+                    ></div>
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-4 w-full sm:w-96 bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl z-[30] p-4"
+                    >
                     {isAdmin && (
                       <div className="mb-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-4 py-3">Status View</p>
@@ -392,6 +425,7 @@ export function ModList() {
               )}
             </AnimatePresence>
           </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:gap-6 w-full max-w-4xl mx-auto pb-10">
@@ -415,12 +449,12 @@ export function ModList() {
                   <div>
                     <div className="flex items-center gap-3 mb-1">
                       {sortMode === 'ranking' ? (
-                        <span className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm shrink-0 ${isTopRank ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                        <span className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl font-bold text-lg sm:text-xl shrink-0 ${isTopRank ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400'}`}>
                           #{index + 1}
                         </span>
                       ) : (
-                        <div className={`w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-slate-400 shrink-0`}>
-                          <Clock className="w-4 h-4" />
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 shrink-0`}>
+                          <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                       )}
                       <h3 className="font-bold text-3xl sm:text-4xl text-white hover:text-indigo-400 transition-colors truncate">
@@ -476,29 +510,49 @@ export function ModList() {
                   )}
                 </div>
                 
-                <div className={`w-full md:w-80 flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-slate-900/50 grayscale opacity-75' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 min-h-[70px]">
-                    <p className={`text-[5px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'}`}>
+                <div className={`w-full md:w-[22rem] flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${mod.status === 'blacklisted' ? 'bg-slate-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-slate-900/50' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
+                  <div className={`flex-1 flex flex-col p-6 min-h-[70px] ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
+                    <p className={`text-[5px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'} ${mod.role !== 'officer' ? 'text-center' : ''}`}>
                       {mod.status === 'blacklisted' ? 'Timer Suspended' : mod.role === 'officer' ? 'Moderators Managed' : 'Time Remaining'}
                     </p>
-                    <div className="whitespace-nowrap flex justify-center w-full scale-110">
+                    <div className={`${mod.role !== 'officer' ? 'whitespace-nowrap flex justify-center w-full scale-110' : 'flex flex-col gap-2'}`}>
                       {mod.status === 'blacklisted' ? (
                         <div className="text-slate-500 font-mono text-2xl font-bold">-- : -- : --</div>
                       ) : mod.role === 'officer' ? (
-                        <div className="text-indigo-400 font-mono text-3xl font-bold">{mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length}</div>
+                        <div className="flex flex-col gap-2 w-full max-h-[140px] overflow-y-auto custom-scrollbar pr-2 text-left">
+                           <ol className="list-decimal list-outside ml-4 space-y-2 text-sm w-full">
+                             {mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map(m => (
+                               <li key={m.id} className="text-slate-300 font-bold marker:text-slate-500 pl-1">
+                                 <div className="flex flex-row justify-between items-center w-full max-w-[280px]">
+                                   <Link to={`/mod/${m.id}`} className="font-semibold text-white hover:text-indigo-400 text-base transition-colors mr-2 truncate">
+                                     {m.name}
+                                   </Link>
+                                   <span className="text-[10px] sm:text-xs bg-slate-900 px-2 py-1 rounded text-slate-400 font-mono border border-slate-700/50 shadow-inner -ml-2 sm:ml-0 shrink-0">
+                                     <CountdownTimer deadlineAt={m.deadlineAt} compact />
+                                   </span>
+                                 </div>
+                               </li>
+                             ))}
+                           </ol>
+                           {mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 && (
+                              <span className="text-xs text-slate-500 italic block mt-2 px-2 text-center">No moderators assigned</span>
+                           )}
+                        </div>
                       ) : (
                         <CountdownTimer deadlineAt={mod.deadlineAt} />
                       )}
                     </div>
                   </div>
-                  <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-1000 ${mod.status === 'blacklisted' || mod.role === 'officer' ? 'bg-slate-700' : isCritical ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                        style={{ width: `${mod.status === 'blacklisted' || mod.role === 'officer' ? 0 : progress}%` }}
-                      />
+                  {mod.role !== 'officer' && (
+                    <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-1000 ${mod.status === 'blacklisted' ? 'bg-slate-700' : isCritical ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                          style={{ width: `${mod.status === 'blacklisted' ? 0 : progress}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             );
