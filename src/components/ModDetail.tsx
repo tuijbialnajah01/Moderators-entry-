@@ -627,7 +627,7 @@ export function ModDetail() {
                    {isAdmin && <p className="text-xs text-slate-500 mt-1">Click "Add Moderator" to assign one.</p>}
                 </div>
               ) : (
-                <ol className="list-decimal list-inside space-y-3">
+                <ol className="list-decimal list-inside space-y-4 sm:space-y-5">
                   {allMods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').map((assignedMod, idx) => {
                     const now = Date.now();
                     const timeLeftMs = assignedMod.deadlineAt - now;

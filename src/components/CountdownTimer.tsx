@@ -18,11 +18,11 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
       return <span className="font-mono text-red-500 font-bold">00d 00h 00m 00s</span>;
     }
     return (
-      <div className="flex gap-3 sm:gap-6 text-center">
-        <div><span className="text-3xl sm:text-5xl font-mono font-bold block bg-red-950/30 p-2 sm:p-4 border border-red-900/50 rounded shadow-sm text-red-500 min-w-[56px] sm:min-w-[96px]">00</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">DAYS</span></div>
-        <div><span className="text-3xl sm:text-5xl font-mono font-bold block bg-red-950/30 p-2 sm:p-4 border border-red-900/50 rounded shadow-sm text-red-500 min-w-[56px] sm:min-w-[96px]">00</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">HRS</span></div>
-        <div><span className="text-3xl sm:text-5xl font-mono font-bold block bg-red-950/30 p-2 sm:p-4 border border-red-900/50 rounded shadow-sm text-red-500 min-w-[56px] sm:min-w-[96px]">00</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">MINS</span></div>
-        <div><span className="text-3xl sm:text-5xl font-mono font-bold block bg-red-950/30 p-2 sm:p-4 border border-red-900/50 rounded shadow-sm text-red-500 min-w-[56px] sm:min-w-[96px]">00</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">SECS</span></div>
+      <div className="flex gap-4 sm:gap-6 justify-center text-center items-center">
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Days</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Hrs</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Mins</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Secs</span></div>
       </div>
     );
   }
@@ -48,15 +48,19 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
   }
 
   const boxClasses = isCritical 
-    ? "text-3xl sm:text-5xl font-mono font-bold block bg-red-950/30 p-2 sm:p-4 border border-red-900/50 rounded shadow-sm text-red-500 min-w-[56px] sm:min-w-[96px]"
-    : "text-3xl sm:text-5xl font-mono font-bold block bg-slate-900 p-2 sm:p-4 border border-slate-800 rounded shadow-sm text-slate-100 min-w-[56px] sm:min-w-[96px]";
+    ? "text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]"
+    : isWarning
+      ? "text-2xl sm:text-3xl font-mono font-bold block bg-amber-950/30 p-2 sm:p-3 border border-amber-900/50 rounded-xl shadow-sm text-amber-500 w-[56px] sm:w-[72px]"
+      : "text-2xl sm:text-3xl font-mono font-bold block bg-slate-900 p-2 sm:p-3 border border-slate-800 rounded-xl shadow-sm text-slate-100 w-[56px] sm:w-[72px]";
+
+  const labelClasses = "text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block";
 
   return (
-    <div className="flex gap-3 sm:gap-6 text-center">
-      <div><span className={boxClasses}>{padUrl(d)}</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">DAYS</span></div>
-      <div><span className={boxClasses}>{padUrl(h)}</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">HRS</span></div>
-      <div><span className={boxClasses}>{padUrl(m)}</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">MINS</span></div>
-      <div><span className={boxClasses}>{padUrl(s)}</span><span className="text-base sm:text-xl uppercase font-semibold tracking-wider text-slate-500 mt-1 block">SECS</span></div>
+    <div className="flex gap-4 sm:gap-6 justify-center text-center items-center">
+      <div><span className={boxClasses}>{padUrl(d)}</span><span className={labelClasses}>Days</span></div>
+      <div><span className={boxClasses}>{padUrl(h)}</span><span className={labelClasses}>Hrs</span></div>
+      <div><span className={boxClasses}>{padUrl(m)}</span><span className={labelClasses}>Mins</span></div>
+      <div><span className={boxClasses}>{padUrl(s)}</span><span className={labelClasses}>Secs</span></div>
     </div>
   );
 }

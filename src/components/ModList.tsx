@@ -428,7 +428,7 @@ export function ModList() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 w-full max-w-4xl mx-auto pb-10">
+        <div className="grid grid-cols-1 gap-8 sm:gap-10 w-full max-w-4xl mx-auto pb-10">
           {authLoading || (loading && mods.length === 0) ? (
             <div className="col-span-full h-40 rounded-2xl bg-slate-800/50 animate-pulse"></div>
           ) : rankedMods.length === 0 ? (
@@ -444,8 +444,18 @@ export function ModList() {
             const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
 
             return (
-              <div key={mod.id} className={`bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex flex-col md:flex-row overflow-hidden border-l-[2px] relative ${mod.role === 'officer' ? 'border-l-indigo-500' : isCritical ? 'border-l-red-500' : isWarning ? 'border-l-amber-500' : 'border-l-emerald-500'} ${isTopRank ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950' : ''}`}>
-                <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+              <div key={mod.id} className={`group bg-slate-900 rounded-3xl border border-slate-800 hover:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col md:flex-row overflow-hidden relative ${mod.role === 'officer' ? '' : ''} ${isTopRank ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950' : ''}`}>
+                {/* Progress bar line top */}
+                {mod.role !== 'officer' && (
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-800 z-10">
+                    <div 
+                      className={`h-full transition-all duration-1000 ease-in-out ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                )}
+                
+                <div className={`p-5 sm:p-7 flex-1 flex flex-col justify-between ${mod.role !== 'officer' ? 'pt-7' : ''}`}>
                   <div>
                     <div className="flex items-center gap-3 mb-1">
                       {sortMode === 'ranking' ? (
@@ -472,13 +482,13 @@ export function ModList() {
                       {mod.status !== 'blacklisted' && (
                         <>
                           {mod.role === 'officer' ? (
-                            <span className="bg-indigo-500/10 text-indigo-400 text-[5px] sm:text-[6px] font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-indigo-500/20">Officer</span>
+                            <span className="bg-indigo-500/10 text-indigo-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-indigo-500/20">Officer</span>
                           ) : isCritical ? (
-                            <span className="bg-red-500/10 text-red-400 text-[5px] sm:text-[6px] font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-red-500/20">Critical</span>
+                            <span className="bg-red-500/10 text-red-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-red-500/20">Critical</span>
                           ) : isWarning ? (
-                            <span className="bg-amber-500/10 text-amber-400 text-[5px] sm:text-[6px] font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-amber-500/20">Warning</span>
+                            <span className="bg-amber-500/10 text-amber-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-amber-500/20">Warning</span>
                           ) : (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[5px] sm:text-[6px] font-black uppercase px-2 py-1.5 rounded-lg tracking-widest flex-shrink-0 border border-emerald-500/20">Safe</span>
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-emerald-500/20">Safe</span>
                           )}
                         </>
                       )}
@@ -510,12 +520,14 @@ export function ModList() {
                   )}
                 </div>
                 
-                <div className={`w-full md:w-[22rem] flex flex-col border-t md:border-t-0 md:border-l border-slate-800 ${mod.status === 'blacklisted' ? 'bg-slate-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-slate-900/50' : isCritical ? 'bg-red-950/20' : 'bg-slate-950/50'}`}>
+                <div className={`w-full md:w-[24rem] flex flex-col border-t md:border-t-0 md:border-l border-slate-800 relative z-0 ${mod.status === 'blacklisted' ? 'bg-slate-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-slate-900/30' : isCritical ? 'bg-red-950/10' : 'bg-slate-900/30'}`}>
                   <div className={`flex-1 flex flex-col p-6 min-h-[70px] ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
-                    <p className={`text-[5px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-500'} ${mod.role !== 'officer' ? 'text-center' : ''}`}>
-                      {mod.status === 'blacklisted' ? 'Timer Suspended' : mod.role === 'officer' ? 'Moderators Managed' : 'Time Remaining'}
-                    </p>
-                    <div className={`${mod.role !== 'officer' ? 'whitespace-nowrap flex justify-center w-full scale-110' : 'flex flex-col gap-2'}`}>
+                    {mod.role !== 'officer' && (
+                      <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${mod.status === 'blacklisted' ? 'text-slate-500' : isCritical ? 'text-red-500' : 'text-slate-400'} text-center`}>
+                        {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
+                      </p>
+                    )}
+                    <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-2'}`}>
                       {mod.status === 'blacklisted' ? (
                         <div className="text-slate-500 font-mono text-2xl font-bold">-- : -- : --</div>
                       ) : mod.role === 'officer' ? (
@@ -543,16 +555,6 @@ export function ModList() {
                       )}
                     </div>
                   </div>
-                  {mod.role !== 'officer' && (
-                    <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${mod.status === 'blacklisted' ? 'bg-slate-700' : isCritical ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                          style={{ width: `${mod.status === 'blacklisted' ? 0 : progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             );
