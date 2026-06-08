@@ -19,10 +19,10 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
     }
     return (
       <div className="flex gap-4 sm:gap-6 justify-center text-center items-center">
-        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Days</span></div>
-        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Hrs</span></div>
-        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Mins</span></div>
-        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block">Secs</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block">Days</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block">Hrs</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block">Mins</span></div>
+        <div><span className="text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]">00</span><span className="text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block">Secs</span></div>
       </div>
     );
   }
@@ -39,7 +39,7 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
   const isWarning = d < 3;
   
   if (compact) {
-    const textColor = isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-slate-300';
+    const textColor = isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-zinc-300';
     return (
       <span className={`font-mono font-bold ${textColor}`}>
         {d}d {padUrl(h)}h {padUrl(m)}m {padUrl(s)}s
@@ -51,9 +51,9 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
     ? "text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]"
     : isWarning
       ? "text-2xl sm:text-3xl font-mono font-bold block bg-amber-950/30 p-2 sm:p-3 border border-amber-900/50 rounded-xl shadow-sm text-amber-500 w-[56px] sm:w-[72px]"
-      : "text-2xl sm:text-3xl font-mono font-bold block bg-slate-900 p-2 sm:p-3 border border-slate-800 rounded-xl shadow-sm text-slate-100 w-[56px] sm:w-[72px]";
+      : "text-2xl sm:text-3xl font-mono font-bold block bg-zinc-900 p-2 sm:p-3 border border-zinc-800 rounded-xl shadow-sm text-zinc-100 w-[56px] sm:w-[72px]";
 
-  const labelClasses = "text-[10px] sm:text-xs uppercase font-bold tracking-widest text-slate-500 mt-1.5 block";
+  const labelClasses = "text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block";
 
   return (
     <div className="flex gap-4 sm:gap-6 justify-center text-center items-center">
