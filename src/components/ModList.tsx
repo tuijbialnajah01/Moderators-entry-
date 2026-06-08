@@ -121,6 +121,7 @@ export function ModList() {
           updatedAt: now,
           status: 'active',
           role: newModRole,
+          totalPoints: 0,
         });
 
         setNewModName('');
@@ -465,25 +466,32 @@ export function ModList() {
                       </h3>
                       {isTopRank && <Trophy className="w-5 h-5 text-blue-400 ml-1" />}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-white/5">
-                        Total Entries: <strong className="text-white ml-1">{mod.entryCount}</strong>
+                    <div className="flex flex-wrap items-center gap-4 mt-5">
+                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 shadow-inner flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Entries</span>
+                        <strong className="text-white font-black">{mod.entryCount}</strong>
                       </p>
-                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-white/5">
-                        Last Active: <strong className="text-white ml-1">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
+                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 shadow-inner">
+                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Points</span>
+                        <strong className="text-amber-400 flex items-center gap-2 font-black">
+                          <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-amber-500" />
+                          {mod.totalPoints || 0}
+                        </strong>
+                      </p>
+                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 shadow-inner flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Active</span>
+                        <strong className="text-white font-black">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
                       </p>
                       {mod.status !== 'blacklisted' && (
-                        <>
+                        <div className="flex gap-2">
                           {mod.role === 'officer' ? (
-                            <span className="bg-blue-500/10 text-blue-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-blue-500/20">Officer</span>
+                            <span className="bg-blue-500/10 text-blue-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-blue-500/20 shadow-lg self-center">Officer</span>
                           ) : isCritical ? (
-                            <span className="bg-red-500/10 text-red-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-red-500/20">Critical</span>
+                            <span className="bg-red-500/10 text-red-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-red-500/20 shadow-lg self-center">Critical</span>
                           ) : isWarning ? (
-                            <span className="bg-amber-500/10 text-amber-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-amber-500/20">Warning</span>
-                          ) : (
-                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] sm:text-xs font-bold uppercase px-2.5 py-1 rounded-md tracking-wider flex-shrink-0 border border-emerald-500/20">Safe</span>
-                          )}
-                        </>
+                            <span className="bg-amber-500/10 text-amber-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-amber-500/20 shadow-lg self-center">Warning</span>
+                          ) : null}
+                        </div>
                       )}
                       {mod.status === 'blacklisted' && (
                         <span className="bg-red-600/20 text-red-500 text-xs font-bold uppercase px-3 py-1.5 rounded-lg border border-red-600/30 flex items-center gap-1.5">
@@ -532,9 +540,15 @@ export function ModList() {
                                    <Link to={`/mod/${m.id}`} className="font-semibold text-white hover:text-blue-400 text-base transition-colors mr-2 truncate">
                                      {m.name}
                                    </Link>
-                                   <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-1 rounded text-zinc-400 font-mono border border-white/5 shadow-inner -ml-2 sm:ml-0 shrink-0">
-                                     <CountdownTimer deadlineAt={m.deadlineAt} compact />
-                                   </span>
+                                   <div className="flex items-center gap-2 shrink-0 h-8">
+                                     <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded text-[10px] font-bold border border-amber-500/20">
+                                       <Trophy className="w-2.5 h-2.5" />
+                                       {m.totalPoints || 0}
+                                     </div>
+                                     <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-1 rounded text-zinc-400 font-mono border border-white/5 shadow-inner shrink-0">
+                                       <CountdownTimer deadlineAt={m.deadlineAt} compact />
+                                     </span>
+                                   </div>
                                  </div>
                                </li>
                              ))}

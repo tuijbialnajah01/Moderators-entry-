@@ -10,6 +10,7 @@ export interface Mod {
   role?: 'moderator' | 'officer';
   officerId?: string; // Legacy
   officerIds?: string[];
+  totalPoints?: number;
 }
 
 export interface Entry {
@@ -17,6 +18,7 @@ export interface Entry {
   text: string;
   createdAt: number;
   createdBy: string;
+  points?: number;
 }
 
 export enum OperationType {

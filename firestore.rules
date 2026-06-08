@@ -48,6 +48,8 @@ service cloud.firestore {
                     ( !('status' in incoming()) || incoming().status in ['active', 'blacklisted'] ) &&
                     ( !('role' in incoming()) || incoming().role in ['moderator', 'officer'] ) &&
                     ( !('officerId' in incoming()) || incoming().officerId is string || incoming().officerId == null ) &&
+                    ( !('officerIds' in incoming()) || incoming().officerIds is list ) &&
+                    ( !('totalPoints' in incoming()) || incoming().totalPoints is number ) &&
                     ( !('lastEntryAt' in incoming()) || incoming().lastEntryAt is number ) &&
                     ( !('deadlineAt' in incoming()) || incoming().deadlineAt is number ) &&
                     ( !('updatedAt' in incoming()) || incoming().updatedAt is number );
@@ -57,21 +59,22 @@ service cloud.firestore {
       match /entries/{entryId} {
         allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
         
-        function isValidEntryCreate(data) {
-          return data.keys().hasAll(['text', 'createdAt', 'createdBy']) &&
-                 data.keys().size() == 3 &&
-                 data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
-                 data.createdAt is number &&
-                 data.createdBy is string && data.createdBy.size() <= 128;
+        function isValidEntry(data) {
+          return data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
+                 (!('createdAt' in data) || data.createdAt is number) &&
+                 (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() <= 128)) &&
+                 (!('points' in data) || data.points is number) &&
+                 (!('updatedAt' in data) || data.updatedAt is number);
         }
 
         allow create: if isAdmin() &&
                       isValidId(entryId) &&
-                      isValidEntryCreate(incoming()) &&
+                      isValidEntry(incoming()) &&
+                      incoming().keys().hasAll(['text', 'createdAt', 'createdBy']) &&
                       incoming().createdBy == request.auth.uid &&
                       existsAfter(/databases/$(database)/documents/mods/$(modId)); 
                       
-        allow update: if false; 
+        allow update: if isAdmin() && isValidEntry(incoming()); 
         allow delete: if isAdmin() && isValidId(entryId);
       }
     }

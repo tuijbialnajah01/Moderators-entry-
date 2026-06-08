@@ -4,7 +4,7 @@ import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, w
 import { db } from '../lib/firebase';
 import { Mod, Entry, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
-import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,7 +19,14 @@ export function ModDetail() {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [entryText, setEntryText] = useState('');
+  const [selectedPoints, setSelectedPoints] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Entry state
+  const [entryToEdit, setEntryToEdit] = useState<Entry | null>(null);
+  const [editEntryText, setEditEntryText] = useState('');
+  const [editEntryPoints, setEditEntryPoints] = useState<number>(1);
+  const [isEditingEntry, setIsEditingEntry] = useState(false);
 
   // Deletion state
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
@@ -99,19 +106,22 @@ export function ModDetail() {
       batch.set(newEntryRef, {
         text: entryText.trim(),
         createdAt: now,
-        createdBy: user.uid
+        createdBy: user.uid,
+        points: selectedPoints
       });
       
       const modRef = doc(db, 'mods', id);
       batch.update(modRef, {
         lastEntryAt: now,
         deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
-        updatedAt: now
+        updatedAt: now,
+        totalPoints: (mod.totalPoints || 0) + selectedPoints
       });
 
       await batch.commit();
 
       setEntryText('');
+      setSelectedPoints(1);
       setShowEntryModal(false);
     } catch (error) {
       console.error('Failed to add entry', error);
@@ -129,6 +139,9 @@ export function ModDetail() {
     try {
       const batch = writeBatch(db);
       
+      const entryToDeleteData = entries.find(e => e.id === entryToDelete);
+      const pointsToDeduct = entryToDeleteData?.points || 0;
+
       // Delete the entry explicitly
       const entryRef = doc(db, `mods/${id}/entries/${entryToDelete}`);
       batch.delete(entryRef);
@@ -145,7 +158,8 @@ export function ModDetail() {
       batch.update(modRef, {
         lastEntryAt: newLastEntryAt,
         deadlineAt: newDeadlineAt,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        totalPoints: Math.max(0, (mod.totalPoints || 0) - pointsToDeduct)
       });
 
       await batch.commit();
@@ -156,6 +170,42 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.WRITE, `mods/${id}/entries`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEditEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !user || !mod || !entryToEdit) return;
+
+    setIsEditingEntry(true);
+    try {
+      const batch = writeBatch(db);
+      const entryRef = doc(db, `mods/${id}/entries/${entryToEdit.id}`);
+      
+      const oldPoints = entryToEdit.points || 0;
+      const pointDifference = editEntryPoints - oldPoints;
+
+      batch.update(entryRef, {
+        text: editEntryText.trim(),
+        points: editEntryPoints,
+        updatedAt: Date.now()
+      });
+
+      if (pointDifference !== 0) {
+        const modRef = doc(db, 'mods', id);
+        batch.update(modRef, {
+          totalPoints: (mod.totalPoints || 0) + pointDifference,
+          updatedAt: Date.now()
+        });
+      }
+
+      await batch.commit();
+      setEntryToEdit(null);
+    } catch (error) {
+      console.error('Failed to edit entry', error);
+      alert('Failed to edit entry.');
+    } finally {
+      setIsEditingEntry(false);
     }
   };
 
@@ -574,14 +624,25 @@ export function ModDetail() {
               </div>
             </div>
 
-            <p className="text-sm text-zinc-400 mb-4 font-medium uppercase tracking-wider">{mod.role === 'officer' ? 'Officer Profile' : 'Moderator Profile'}</p>
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <span className={`w-2 h-2 rounded-full ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
-              Last Entry: <span className="font-semibold text-white">{new Date(mod.lastEntryAt).toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-zinc-400 mt-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              Total Entries: <span className="font-semibold text-white">{entries.length}</span>
+            <p className="text-xl text-zinc-400 mb-8 font-black uppercase tracking-[0.2em] border-b-2 border-blue-500/30 pb-3 inline-block">
+              {mod.role === 'officer' ? 'Officer Intel' : 'Moderator Intel'}
+            </p>
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-4 text-xl sm:text-3xl text-zinc-300 bg-black/30 p-4 rounded-2xl border border-white/5 shadow-inner">
+                <span className={`w-4 h-4 rounded-full ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)]'}`}></span>
+                <span className="text-zinc-500 text-sm sm:text-base font-bold uppercase tracking-widest shrink-0">Last Active:</span>
+                <span className="font-black text-white">{new Date(mod.lastEntryAt).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-4 text-xl sm:text-3xl text-zinc-300 bg-black/30 p-4 rounded-2xl border border-white/5 shadow-inner">
+                <span className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"></span>
+                <span className="text-zinc-500 text-sm sm:text-base font-bold uppercase tracking-widest shrink-0">Total Logs:</span>
+                <span className="font-black text-white">{entries.length}</span>
+              </div>
+              <div className="flex items-center gap-4 text-xl sm:text-4xl text-zinc-300 bg-amber-500/5 p-6 rounded-3xl border border-amber-500/20 shadow-2xl">
+                <span className="w-5 h-5 rounded-full bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.7)]"></span>
+                <span className="text-amber-500/70 text-sm sm:text-lg font-black uppercase tracking-[0.1em] shrink-0">Merit Points:</span>
+                <span className="font-black text-amber-400 text-4xl sm:text-6xl ml-auto">{mod.totalPoints || 0}</span>
+              </div>
             </div>
           </div>
           <div className={`p-6 md:p-8 flex flex-col items-center justify-center border-t md:border-t-0 border-white/5 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-zinc-900/50' : 'bg-black/50'}`}>
@@ -642,9 +703,15 @@ export function ModDetail() {
                           <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-blue-400 transition-colors text-xl sm:text-2xl block">
                              {assignedMod.name}
                           </Link>
-                          {assignedMod.phoneNumber && (
-                            <div className="text-xs text-zinc-500 font-mono mt-1 font-normal">{assignedMod.phoneNumber}</div>
-                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            {assignedMod.phoneNumber && (
+                              <div className="text-xs text-zinc-500 font-mono font-normal">{assignedMod.phoneNumber}</div>
+                            )}
+                            <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-500/20">
+                              <Trophy className="w-2.5 h-2.5" />
+                              {assignedMod.totalPoints || 0} pts
+                            </div>
+                          </div>
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto font-normal ml-2 sm:ml-0">
                           <div className="bg-zinc-900 border border-white/5 rounded px-2 py-1 text-sm shadow-inner relative z-10">
@@ -686,19 +753,39 @@ export function ModDetail() {
                   {entries.map((entry) => (
                     <li key={entry.id} className="pl-2 border-b border-white/5/50 pb-6 last:border-0 last:pb-0 relative group">
                       <div className="flex flex-col gap-1.5">
-                        <span className="text-zinc-200 font-medium whitespace-pre-wrap">{entry.text}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-200 font-medium whitespace-pre-wrap">{entry.text}</span>
+                          {entry.points && (
+                            <span className="bg-amber-500 text-amber-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm ml-2 shrink-0">
+                              +{entry.points} pts
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-zinc-400 font-mono text-xs bg-black inline-block px-2 py-1 rounded border border-white/5">
                             {new Date(entry.createdAt).toLocaleString()}
                           </span>
                           {isAdmin && (
-                            <button
-                              onClick={() => setEntryToDelete(entry.id)}
-                              className="text-zinc-500 hover:text-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 p-1"
-                              title="Delete entry"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => {
+                                  setEntryToEdit(entry);
+                                  setEditEntryText(entry.text);
+                                  setEditEntryPoints(entry.points || 1);
+                                }}
+                                className="text-zinc-500 hover:text-blue-500 transition-colors p-1"
+                                title="Edit entry"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setEntryToDelete(entry.id)}
+                                className="text-zinc-500 hover:text-red-500 transition-colors p-1"
+                                title="Delete entry"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -737,6 +824,22 @@ export function ModDetail() {
                       required
                     />
                   </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-zinc-300 mb-4">Choose Points for this Entry</label>
+                    <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                      {[1, 2, 3, 5, 10, 15, 20, 25].map((pts) => (
+                        <button
+                          key={pts}
+                          type="button"
+                          onClick={() => setSelectedPoints(pts)}
+                          className={`px-4 py-3 rounded-xl border text-lg font-bold transition-all ${selectedPoints === pts ? 'bg-amber-500 border-amber-400 text-amber-950 scale-105 shadow-lg shadow-amber-500/20' : 'bg-black border-white/10 text-zinc-400 hover:border-white/30 hover:text-white'}`}
+                        >
+                          {pts}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                   <button
@@ -749,6 +852,65 @@ export function ModDetail() {
                   <button
                     type="button"
                     onClick={() => setShowEntryModal(false)}
+                    className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {entryToEdit && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setEntryToEdit(null)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-white/5 z-10 mx-auto transform-gpu">
+              <form onSubmit={handleEditEntry}>
+                <div className="bg-zinc-900 px-6 pb-6 pt-6">
+                  <h3 className="text-xl font-bold leading-6 text-white mb-6">Edit Entry Log</h3>
+                  
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">Entry Details</label>
+                    <textarea
+                      rows={4}
+                      className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border resize-none"
+                      value={editEntryText}
+                      onChange={(e) => setEditEntryText(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-zinc-300 mb-4">Update Points</label>
+                    <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                      {[1, 2, 3, 5, 10, 15, 20, 25].map((pts) => (
+                        <button
+                          key={pts}
+                          type="button"
+                          onClick={() => setEditEntryPoints(pts)}
+                          className={`px-4 py-3 rounded-xl border text-lg font-bold transition-all ${editEntryPoints === pts ? 'bg-amber-500 border-amber-400 text-amber-950 scale-105 shadow-lg shadow-amber-500/20' : 'bg-black border-white/10 text-zinc-400 hover:border-white/30 hover:text-white'}`}
+                        >
+                          {pts}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
+                  <button
+                    type="submit"
+                    disabled={isEditingEntry || !editEntryText.trim()}
+                    className="inline-flex w-full justify-center rounded-lg border border-transparent bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50"
+                  >
+                    {isEditingEntry ? 'Updating...' : 'Update Entry'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEntryToEdit(null)}
                     className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                   >
                     Cancel
