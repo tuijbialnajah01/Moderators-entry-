@@ -521,7 +521,7 @@ export function ModList() {
                       ) : mod.role === 'officer' ? (
                         <div className="flex flex-col gap-2 w-full max-h-[140px] overflow-y-auto custom-scrollbar pr-2 text-left">
                            <ol className="list-decimal list-outside ml-4 space-y-2 text-sm w-full">
-                             {mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map(m => (
+                             {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').map(m => (
                                <li key={m.id} className="text-slate-300 font-bold marker:text-slate-500 pl-1">
                                  <div className="flex flex-row justify-between items-center w-full max-w-[280px]">
                                    <Link to={`/mod/${m.id}`} className="font-semibold text-white hover:text-indigo-400 text-base transition-colors mr-2 truncate">
@@ -534,7 +534,7 @@ export function ModList() {
                                </li>
                              ))}
                            </ol>
-                           {mods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 && (
+                           {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 && (
                               <span className="text-xs text-slate-500 italic block mt-2 px-2 text-center">No moderators assigned</span>
                            )}
                         </div>

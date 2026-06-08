@@ -262,15 +262,16 @@ export function ModDetail() {
       const newRole = action === 'promote' ? 'officer' : 'moderator';
       
       // If demoting from officer to moderator, optionally unassign managed mods?
-      // For now, let's just update the role. Managed mods still ref this ID, but this person is no longer an officer.
-      // So let's clear the officerId from all managed mods if they are demoted.
+      // Since a mod can have multiple officers, we just remove this officer's id from officerIds.
       if (action === 'demote') {
-        const managedMods = allMods.filter(m => m.officerId === id);
+        const managedMods = allMods.filter(m => m.officerIds?.includes(id) || m.officerId === id);
         if (managedMods.length > 0) {
           const batch = writeBatch(db);
           managedMods.forEach(m => {
             const modRef = doc(db, 'mods', m.id);
-            batch.update(modRef, { officerId: null, updatedAt: Date.now() });
+            const currentOfficerIds = Array.from(new Set([...(m.officerIds || []), m.officerId].filter(Boolean))) as string[];
+            const newOfficerIds = currentOfficerIds.filter(oid => oid !== id);
+            batch.update(modRef, { officerIds: newOfficerIds, officerId: null, updatedAt: Date.now() });
           });
           await batch.commit();
         }
@@ -295,8 +296,14 @@ export function ModDetail() {
     setIsAssigning(true);
     try {
       const modRef = doc(db, 'mods', modIdToAssign);
+      const modToAssign = allMods.find(m => m.id === modIdToAssign);
+      const currentOfficerIds = Array.from(new Set([...(modToAssign?.officerIds || []), modToAssign?.officerId].filter(Boolean)));
+      if (id && !currentOfficerIds.includes(id)) {
+        currentOfficerIds.push(id);
+      }
       await updateDoc(modRef, {
-        officerId: id,
+        officerIds: currentOfficerIds,
+        officerId: null, // Clear legacy
         updatedAt: Date.now()
       });
     } catch (error) {
@@ -311,8 +318,12 @@ export function ModDetail() {
   const handleUnassignModerator = async (modIdToUnassign: string) => {
     try {
       const modRef = doc(db, 'mods', modIdToUnassign);
+      const modToUnassign = allMods.find(m => m.id === modIdToUnassign);
+      const currentOfficerIds = Array.from(new Set([...(modToUnassign?.officerIds || []), modToUnassign?.officerId].filter(Boolean)));
+      const newOfficerIds = currentOfficerIds.filter(oid => oid !== id);
       await updateDoc(modRef, {
-        officerId: null,
+        officerIds: newOfficerIds,
+        officerId: null, // Clear legacy
         updatedAt: Date.now()
       });
     } catch (error) {
@@ -610,14 +621,14 @@ export function ModDetail() {
             </div>
             
             <div className="p-6">
-              {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
+              {allMods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
                 <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-dashed border-slate-700">
                    <p className="text-sm text-slate-400 font-medium">No moderators assigned to this officer.</p>
                    {isAdmin && <p className="text-xs text-slate-500 mt-1">Click "Add Moderator" to assign one.</p>}
                 </div>
               ) : (
                 <ol className="list-decimal list-inside space-y-3">
-                  {allMods.filter(m => m.officerId === mod.id && m.role !== 'officer' && m.status !== 'blacklisted').map((assignedMod, idx) => {
+                  {allMods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').map((assignedMod, idx) => {
                     const now = Date.now();
                     const timeLeftMs = assignedMod.deadlineAt - now;
                     const isCritical = assignedMod.role === 'officer' ? false : timeLeftMs < 24 * 60 * 60 * 1000;
@@ -861,16 +872,16 @@ export function ModDetail() {
             <div className="relative transform overflow-hidden rounded-xl bg-slate-900 text-left shadow-2xl transition-all w-full max-w-lg border border-slate-800 z-10 mx-auto flex flex-col max-h-[80vh]">
               <div className="bg-slate-900 px-6 py-5 border-b border-slate-800">
                 <h3 className="text-xl font-bold leading-6 text-white">Assign Moderator</h3>
-                <p className="text-sm text-slate-400 mt-1">Select an unassigned active moderator to assign to this officer.</p>
+                <p className="text-sm text-slate-400 mt-1">Select an active moderator to assign to this officer.</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6 bg-slate-950">
-                {allMods.filter(m => !m.officerId && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
+                {allMods.filter(m => m.role !== 'officer' && m.status !== 'blacklisted' && !m.officerIds?.includes(mod.id) && m.officerId !== mod.id).length === 0 ? (
                   <div className="text-center py-8">
-                     <p className="text-sm text-slate-400 font-medium">No available unassigned moderators found.</p>
+                     <p className="text-sm text-slate-400 font-medium">No available moderators found.</p>
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    {allMods.filter(m => !m.officerId && m.role !== 'officer' && m.status !== 'blacklisted').map(unassignedMod => (
+                    {allMods.filter(m => m.role !== 'officer' && m.status !== 'blacklisted' && !m.officerIds?.includes(mod.id) && m.officerId !== mod.id).map(unassignedMod => (
                       <div key={unassignedMod.id} className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors">
                         <div>
                           <p className="font-bold text-white text-xl sm:text-2xl">{unassignedMod.name}</p>
