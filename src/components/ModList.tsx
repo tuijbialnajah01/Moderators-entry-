@@ -339,42 +339,42 @@ export function ModList() {
       </header>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto w-full p-3 sm:p-8">
-        <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2rem] w-full shadow-lg shadow-black/20">
+      <div className="flex-1 overflow-y-auto w-full p-4 sm:p-10">
+        <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 mb-8">
+          <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2.5rem] w-full shadow-xl shadow-black/40">
              <button
                 onClick={() => setModRoleView('moderator')}
-                className={`flex-1 px-10 py-5 sm:py-6 rounded-2xl text-2xl sm:text-3xl font-bold transition-all ${modRoleView === 'moderator' ? 'bg-blue-600 text-white shadow-md scale-[1.02]' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
+                className={`flex-1 px-6 py-4 sm:py-5 rounded-[2rem] text-xl sm:text-2xl font-bold transition-all ${modRoleView === 'moderator' ? 'bg-blue-600 text-white shadow-lg scale-[1.01]' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
              >
                 Moderators
              </button>
              <button
                 onClick={() => setModRoleView('officer')}
-                className={`flex-1 px-10 py-5 sm:py-6 rounded-2xl text-2xl sm:text-3xl font-bold transition-all ${modRoleView === 'officer' ? 'bg-blue-600 text-white shadow-md scale-[1.02]' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
+                className={`flex-1 px-6 py-4 sm:py-5 rounded-[2rem] text-xl sm:text-2xl font-bold transition-all ${modRoleView === 'officer' ? 'bg-blue-600 text-white shadow-lg scale-[1.01]' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
              >
                 Officers
              </button>
           </div>
 
-          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
-            <div className="relative w-full sm:flex-1">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-7 h-7 text-zinc-500" />
+          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-4 w-full">
+            <div className="relative w-full lg:flex-1">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-zinc-500" />
               <input
                 type="text"
-                placeholder="Search by name or number..."
+                placeholder="Search member by name or number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-16 pr-6 py-5 sm:py-6 bg-zinc-900 border border-white/5 rounded-[2rem] text-xl sm:text-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-lg shadow-black/20 transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
+                className="w-full pl-16 pr-6 py-4 sm:py-5 bg-zinc-900 border border-white/5 rounded-[2rem] text-lg sm:text-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-lg shadow-black/20 transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
               />
             </div>
-            <div className="relative flex justify-end w-full sm:w-auto">
+            <div className="relative flex justify-end w-full lg:w-auto">
               <button 
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center justify-center w-full sm:w-auto gap-4 px-8 py-5 sm:py-6 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-xl sm:text-2xl shadow-lg shadow-black/20"
+                className="flex items-center justify-center w-full lg:w-auto gap-4 px-8 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"
               >
-                <Filter className="w-8 h-8 text-blue-400" />
+                <Filter className="w-6 h-6 text-blue-400" />
                 <span>Filters & Sort</span>
-                <ChevronDown className={`w-8 h-8 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-6 h-6 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
               </button>
 
               <AnimatePresence>
@@ -435,11 +435,11 @@ export function ModList() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 sm:gap-10 w-full max-w-4xl mx-auto pb-10">
+        <div className="grid grid-cols-1 gap-8 w-full max-w-6xl mx-auto pb-16">
           {authLoading || (loading && mods.length === 0) ? (
-            <div className="col-span-full h-40 rounded-2xl bg-zinc-800/50 animate-pulse"></div>
+            <div className="col-span-full h-64 rounded-3xl bg-zinc-900/50 border border-white/5 animate-pulse"></div>
           ) : rankedMods.length === 0 ? (
-            <div className="col-span-full p-8 sm:p-16 text-center text-zinc-400 bg-zinc-900 border border-dashed border-white/10 rounded-2xl text-sm sm:text-base">
+            <div className="col-span-full p-20 text-center text-zinc-500 bg-zinc-900/30 border border-dashed border-white/10 rounded-[3rem] text-xl">
                No {modRoleView}s found in the system.
             </div>
           ) : rankedMods.map((mod, index) => {
@@ -451,56 +451,60 @@ export function ModList() {
             const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
 
             return (
-              <div key={mod.id} className={`group bg-zinc-900 rounded-3xl border border-white/5 hover:border-white/10 shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col md:flex-row overflow-hidden relative transform-gpu ${mod.role === 'officer' ? '' : ''} ${isTopRank ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-950' : ''}`}>
-                <div className={`p-5 sm:p-7 flex-1 flex flex-col justify-between ${mod.role !== 'officer' ? 'pt-7' : ''}`}>
+              <div key={mod.id} className={`group bg-zinc-900 rounded-[2.5rem] border border-white/5 hover:border-blue-500/20 shadow-2xl shadow-black/40 hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-500 flex flex-col md:flex-row overflow-hidden relative transform-gpu ${isTopRank ? 'ring-2 ring-blue-500/50 ring-offset-4 ring-offset-black' : ''}`}>
+                <div className="p-8 sm:p-10 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center gap-5 mb-4">
                       {sortMode === 'ranking' ? (
-                        <span className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl font-bold text-lg sm:text-xl shrink-0 ${isTopRank ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-zinc-800 text-zinc-400'}`}>
+                        <span className={`w-12 h-12 flex items-center justify-center rounded-2xl font-black text-xl shrink-0 ${isTopRank ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'bg-zinc-800 text-zinc-500'}`}>
                           #{index + 1}
                         </span>
                       ) : (
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-zinc-800 text-zinc-400 shrink-0`}>
-                          <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
+                          <Clock className="w-6 h-6" />
                         </div>
                       )}
-                      <h3 className="font-bold text-3xl sm:text-4xl text-white hover:text-blue-400 transition-colors truncate">
+                      <h3 className="font-black text-3xl sm:text-4xl lg:text-5xl text-white hover:text-blue-400 transition-colors truncate tracking-tight">
                         <Link to={`/mod/${mod.id}`} className="block w-full truncate">{mod.name}</Link>
                       </h3>
-                      {isTopRank && <Trophy className="w-5 h-5 text-blue-400 ml-1" />}
+                      {isTopRank && <Trophy className="w-7 h-7 text-amber-400 ml-1 drop-shadow-md" />}
                     </div>
-                    <div className="flex flex-wrap items-center gap-4 mt-5">
-                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 shadow-inner flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Entries</span>
-                        <strong className="text-white font-black">{mod.entryCount}</strong>
+                    
+                    <div className="flex flex-wrap items-center gap-4 mt-8">
+                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[140px]">
+                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Entries</span>
+                        <strong className="text-xl sm:text-3xl text-white font-black">{mod.entryCount}</strong>
                       </p>
-                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 shadow-inner">
-                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Points</span>
-                        <strong className="text-amber-400 flex items-center gap-2 font-black">
+                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
+                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Points</span>
+                        <strong className="text-xl sm:text-3xl text-amber-400 flex items-center gap-3 font-black">
                           <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-amber-500" />
                           {mod.totalPoints || 0}
                         </strong>
                       </p>
-                      <p className="text-lg sm:text-2xl text-zinc-300 bg-black/40 px-5 py-3 rounded-2xl border border-white/5 shadow-inner flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="text-sm sm:text-lg text-zinc-500 uppercase tracking-widest font-bold">Active</span>
-                        <strong className="text-white font-black">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
+                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[160px]">
+                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Last Active</span>
+                        <strong className="text-xl sm:text-2xl text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
                       </p>
-                      {mod.status !== 'blacklisted' && (
-                        <div className="flex gap-2">
-                          {mod.role === 'officer' ? (
-                            <span className="bg-blue-500/10 text-blue-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-blue-500/20 shadow-lg self-center">Officer</span>
-                          ) : isCritical ? (
-                            <span className="bg-red-500/10 text-red-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-red-500/20 shadow-lg self-center">Critical</span>
-                          ) : isWarning ? (
-                            <span className="bg-amber-500/10 text-amber-400 text-sm sm:text-base font-bold uppercase px-4 py-2 rounded-xl tracking-wider flex-shrink-0 border border-amber-500/20 shadow-lg self-center">Warning</span>
-                          ) : null}
-                        </div>
-                      )}
-                      {mod.status === 'blacklisted' && (
-                        <span className="bg-red-600/20 text-red-500 text-xs font-bold uppercase px-3 py-1.5 rounded-lg border border-red-600/30 flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Blacklisted
-                        </span>
-                      )}
+                      
+                      <div className="flex gap-3 ml-auto self-end">
+                        {mod.status !== 'blacklisted' && (
+                          <>
+                            {mod.role === 'officer' ? (
+                              <span className="bg-blue-500/10 text-blue-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-blue-500/20 shadow-lg">Officer</span>
+                            ) : isCritical ? (
+                              <span className="bg-red-500/10 text-red-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-red-500/20 shadow-lg animate-pulse">Critical</span>
+                            ) : isWarning ? (
+                              <span className="bg-amber-500/10 text-amber-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-amber-500/20 shadow-lg">Warning</span>
+                            ) : null}
+                          </>
+                        )}
+                        {mod.status === 'blacklisted' && (
+                          <span className="bg-red-600/20 text-red-500 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl border border-red-600/30 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" /> Blacklisted
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {isAdmin && (
@@ -524,40 +528,41 @@ export function ModList() {
                   )}
                 </div>
                 
-                <div className={`w-full md:w-[24rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/30' : isCritical ? 'bg-red-950/10' : 'bg-zinc-900/30'}`}>
-                  <div className={`flex-1 flex flex-col p-6 min-h-[70px] ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
+                <div className={`w-full md:w-[32rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
+                  <div className={`flex-1 flex flex-col p-8 ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
                     {mod.role !== 'officer' && (
-                      <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${mod.status === 'blacklisted' ? 'text-zinc-500' : isCritical ? 'text-red-500' : 'text-zinc-400'} text-center`}>
+                      <p className={`text-xs uppercase tracking-[0.3em] font-black mb-6 ${mod.status === 'blacklisted' ? 'text-zinc-600' : isCritical ? 'text-red-500' : 'text-zinc-500'} text-center`}>
                         {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
                       </p>
                     )}
-                    <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-2'}`}>
+                    <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-4'}`}>
                       {mod.status === 'blacklisted' ? (
-                        <div className="text-zinc-500 font-mono text-2xl font-bold">-- : -- : --</div>
+                        <div className="text-zinc-700 font-mono text-4xl font-black tracking-widest">--:--:--</div>
                       ) : mod.role === 'officer' ? (
-                        <div className="flex flex-col gap-2 w-full max-h-[140px] overflow-y-auto custom-scrollbar pr-2 text-left">
-                           <ol className="list-decimal list-outside ml-4 space-y-2 text-sm w-full">
+                        <div className="flex flex-col gap-3 w-full max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
+                           <p className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500 mb-2 px-1">Managed Units</p>
+                           <ol className="space-y-3 text-sm w-full">
                              {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').map(m => (
-                               <li key={m.id} className="text-zinc-300 font-bold marker:text-zinc-500 pl-1">
-                                 <div className="flex flex-row justify-between items-center w-full max-w-[280px]">
-                                   <Link to={`/mod/${m.id}`} className="font-semibold text-white hover:text-blue-400 text-base transition-colors mr-2 truncate">
+                               <li key={m.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
+                                   <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-lg transition-colors truncate max-w-[180px]">
                                      {m.name}
                                    </Link>
-                                   <div className="flex items-center gap-2 shrink-0 h-8">
-                                     <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded text-[10px] font-bold border border-amber-500/20">
-                                       <Trophy className="w-2.5 h-2.5" />
+                                   <div className="flex items-center gap-3 shrink-0">
+                                     <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20">
+                                       <Trophy className="w-3.5 h-3.5" />
                                        {m.totalPoints || 0}
                                      </div>
-                                     <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-1 rounded text-zinc-400 font-mono border border-white/5 shadow-inner shrink-0">
+                                     <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
                                        <CountdownTimer deadlineAt={m.deadlineAt} compact />
                                      </span>
                                    </div>
-                                 </div>
                                </li>
                              ))}
                            </ol>
                            {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 && (
-                              <span className="text-xs text-zinc-500 italic block mt-2 px-2 text-center">No moderators assigned</span>
+                              <div className="py-12 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center">
+                                <span className="text-sm text-zinc-600 font-bold uppercase tracking-widest">No Active Units</span>
+                              </div>
                            )}
                         </div>
                       ) : (
