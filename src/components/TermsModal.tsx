@@ -115,6 +115,20 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                       </p>
                     </div>
 
+                    <div className="flex gap-5">
+                      <span className="font-bold text-blue-400 text-3xl sm:text-4xl">4.</span>
+                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
+                        Organise An Event
+                      </p>
+                    </div>
+
+                    <div className="flex gap-5">
+                      <span className="font-bold text-blue-400 text-3xl sm:text-4xl">5.</span>
+                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
+                        Work on any idea and make it successful. Collaborating on these initiatives within the group is fully permitted, and the activity timer will be reset for all contributing members upon successful completion.
+                      </p>
+                    </div>
+
                     <div className="mt-12 pt-12 border-t border-white/5 space-y-8">
                       <p className="font-mono font-bold text-blue-300 text-center bg-blue-500/10 p-8 sm:p-10 rounded-3xl border border-blue-500/30 shadow-inner text-xl sm:text-2xl leading-relaxed">
                         ——&gt;Any one of the above contributions is sufficient to remain an active moderator&lt;——
@@ -144,6 +158,12 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                         <span className="font-bold text-blue-400 text-3xl sm:text-4xl">3.</span>
                         <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
                           Listen Carefully to mods problem or user concerning problems.
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-5">
+                        <span className="font-bold text-blue-400 text-3xl sm:text-4xl">4.</span>
+                        <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
+                          Officers can perform any task assigned to Moderators. While Officers do not have strict time limits for these tasks, they carry much higher accountability and broader responsibilities.
                         </p>
                       </div>
                     </div>

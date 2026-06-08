@@ -270,13 +270,22 @@ export function ModList() {
             Moderators Report
           </h1>
         </div>
-        <div className="relative">
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => setShowHeaderMenu(!showHeaderMenu)}
-            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-white/10"
+            onClick={() => setShowTermsModal(true)}
+            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-white/10 flex items-center gap-3 group"
+            title="Rules & Guidelines"
           >
-            <Menu className="w-8 h-8 sm:w-12 sm:h-12" />
+            <ScrollText className="w-8 h-8 sm:w-12 sm:h-12 text-blue-400 group-hover:scale-110 transition-transform" />
+            <span className="hidden lg:block text-xl font-bold">Rules</span>
           </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+              className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-white/10"
+            >
+              <Menu className="w-8 h-8 sm:w-12 sm:h-12" />
+            </button>
 
           <AnimatePresence>
             {showHeaderMenu && (
@@ -291,14 +300,7 @@ export function ModList() {
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6 transform-gpu"
                 >
-                  <button 
-                    onClick={() => { setShowTermsModal(true); setShowHeaderMenu(false); }}
-                    className="flex items-center gap-5 px-6 py-5 sm:px-8 sm:py-6 text-2xl sm:text-3xl font-bold rounded-3xl bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all w-full"
-                  >
-                    <ScrollText className="w-10 h-10 sm:w-12 sm:h-12" />
-                    <span>Rules & Guidelines</span>
-                  </button>
-                  
+
                   {user ? (
                     <button 
                       onClick={() => { logOut(); setShowHeaderMenu(false); }} 
@@ -332,6 +334,7 @@ export function ModList() {
               </>
             )}
           </AnimatePresence>
+          </div>
         </div>
       </header>
 
