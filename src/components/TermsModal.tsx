@@ -94,7 +94,7 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
 
                           <div className="mt-8 inline-block">
                             <p className="text-xl font-bold text-amber-400 px-8 py-4 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                              ( Any two of these )
+                              ( Any two of these within a week )
                             </p>
                           </div>
                         </div>

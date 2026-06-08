@@ -205,6 +205,12 @@ export function ModList() {
     
     if (sortMode === 'ranking') {
       list.sort((a, b) => {
+        const pointsA = a.totalPoints || 0;
+        const pointsB = b.totalPoints || 0;
+        
+        if (pointsB !== pointsA) {
+          return pointsB - pointsA;
+        }
         if (b.entryCount !== a.entryCount) {
           return b.entryCount - a.entryCount;
         }
