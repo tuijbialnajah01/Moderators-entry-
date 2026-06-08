@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
+import { TermsModal } from './TermsModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search } from 'lucide-react';
@@ -24,6 +25,7 @@ export function ModList() {
   const [newModName, setNewModName] = useState('');
   const [newModPhone, setNewModPhone] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [addModError, setAddModError] = useState('');
@@ -186,14 +188,14 @@ export function ModList() {
 
     let list = filtered.map(mod => ({ ...mod, entryCount: entriesMap[mod.id] || 0 }));
     
-    if (searchQuery.trim()) {
+    if (deferredSearchQuery.trim()) {
       const normalizeText = (str: string) => {
         return str
           .normalize('NFKC')
           .toLowerCase()
           .replace(/[\u0300-\u036f]/g, '');
       };
-      const q = normalizeText(searchQuery.trim());
+      const q = normalizeText(deferredSearchQuery.trim());
       list = list.filter(mod => 
         normalizeText(mod.name).includes(q) || 
         (mod.phoneNumber && mod.phoneNumber.includes(q))
@@ -212,19 +214,20 @@ export function ModList() {
     }
     
     return list;
-  }, [mods, entriesMap, sortMode, viewMode, modRoleView, searchQuery]);
+  }, [mods, entriesMap, sortMode, viewMode, modRoleView, deferredSearchQuery]);
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.show && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl transition-opacity backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-zinc-900 border border-white/5 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform-gpu"
             >
               <div className="p-6 text-center">
                 <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${confirmModal.action === 'blacklisted' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
@@ -260,7 +263,7 @@ export function ModList() {
       </AnimatePresence>
 
       {/* Top Header */}
-      <header className="h-28 sm:h-32 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-6 sm:px-16 flex-shrink-0 z-10">
+      <header className="h-28 sm:h-32 bg-zinc-900 border-b border-white/5 flex items-center justify-between px-6 sm:px-16 flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-white flex items-center gap-4">
             Moderators Report
@@ -269,7 +272,7 @@ export function ModList() {
         <div className="relative">
           <button 
             onClick={() => setShowHeaderMenu(!showHeaderMenu)}
-            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-zinc-700"
+            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-white/10"
           >
             <Menu className="w-8 h-8 sm:w-12 sm:h-12" />
           </button>
@@ -285,7 +288,7 @@ export function ModList() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
+                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6 transform-gpu"
                 >
                   <button 
                     onClick={() => { setShowTermsModal(true); setShowHeaderMenu(false); }}
@@ -314,10 +317,10 @@ export function ModList() {
                   )}
                   
                   {isAdmin && (
-                    <div className="pt-6 mt-2 border-t border-zinc-800">
+                    <div className="pt-6 mt-2 border-t border-white/5">
                       <button 
                         onClick={() => { setShowAddModal(true); setAddModError(''); setNewModName(''); setNewModPhone(''); setShowHeaderMenu(false); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-sm w-full"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full"
                       >
                         <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                         <span>Add Moderator</span>
@@ -334,7 +337,7 @@ export function ModList() {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto w-full p-3 sm:p-8">
         <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center p-2 bg-zinc-900 border border-zinc-800 rounded-[2rem] w-full shadow-sm">
+          <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2rem] w-full shadow-lg shadow-black/20">
              <button
                 onClick={() => setModRoleView('moderator')}
                 className={`flex-1 px-10 py-5 sm:py-6 rounded-2xl text-2xl sm:text-3xl font-bold transition-all ${modRoleView === 'moderator' ? 'bg-blue-600 text-white shadow-md scale-[1.02]' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
@@ -351,19 +354,19 @@ export function ModList() {
 
           <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
             <div className="relative w-full sm:flex-1">
-              <Search className="absolute left-6 top-1/2 -tranzinc-y-1/2 w-7 h-7 text-zinc-500" />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-7 h-7 text-zinc-500" />
               <input
                 type="text"
                 placeholder="Search by name or number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-16 pr-6 py-5 sm:py-6 bg-zinc-900 border border-zinc-800 rounded-[2rem] text-xl sm:text-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
+                className="w-full pl-16 pr-6 py-5 sm:py-6 bg-zinc-900 border border-white/5 rounded-[2rem] text-xl sm:text-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-lg shadow-black/20 transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
               />
             </div>
             <div className="relative flex justify-end w-full sm:w-auto">
               <button 
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center justify-center w-full sm:w-auto gap-4 px-8 py-5 sm:py-6 rounded-[2rem] bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-xl sm:text-2xl shadow-sm"
+                className="flex items-center justify-center w-full sm:w-auto gap-4 px-8 py-5 sm:py-6 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-xl sm:text-2xl shadow-lg shadow-black/20"
               >
                 <Filter className="w-8 h-8 text-blue-400" />
                 <span>Filters & Sort</span>
@@ -381,11 +384,11 @@ export function ModList() {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-4 w-full sm:w-96 bg-zinc-900 border border-zinc-800 rounded-[2rem] shadow-2xl z-[30] p-4"
+                      className="absolute right-0 mt-4 w-full sm:w-96 bg-zinc-900 border border-white/5 rounded-[2rem] shadow-2xl z-[30] p-4 transform-gpu"
                     >
                     {isAdmin && (
                       <div className="mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-4 py-3">Status View</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-4 py-3">Status View</p>
                         <button 
                           onClick={() => { setViewMode('active'); setShowFilterDropdown(false); }}
                           className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl transition-colors ${viewMode === 'active' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
@@ -403,8 +406,8 @@ export function ModList() {
                       </div>
                     )}
 
-                    <div className={isAdmin ? "pt-4 border-t border-zinc-800/50" : ""}>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-4 py-3">Sort By</p>
+                    <div className={isAdmin ? "pt-4 border-t border-white/5/50" : ""}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-4 py-3">Sort By</p>
                       <button 
                         onClick={() => { setSortMode('ranking'); setShowFilterDropdown(false); }}
                         className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl transition-colors ${sortMode === 'ranking' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
@@ -432,7 +435,7 @@ export function ModList() {
           {authLoading || (loading && mods.length === 0) ? (
             <div className="col-span-full h-40 rounded-2xl bg-zinc-800/50 animate-pulse"></div>
           ) : rankedMods.length === 0 ? (
-            <div className="col-span-full p-8 sm:p-16 text-center text-zinc-400 bg-zinc-900 border border-dashed border-zinc-700 rounded-2xl text-sm sm:text-base">
+            <div className="col-span-full p-8 sm:p-16 text-center text-zinc-400 bg-zinc-900 border border-dashed border-white/10 rounded-2xl text-sm sm:text-base">
                No {modRoleView}s found in the system.
             </div>
           ) : rankedMods.map((mod, index) => {
@@ -444,17 +447,7 @@ export function ModList() {
             const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
 
             return (
-              <div key={mod.id} className={`group bg-zinc-900 rounded-3xl border border-zinc-800 hover:border-zinc-700 shadow-sm hover:shadow-xl hover:-tranzinc-y-1 transition-all duration-300 flex flex-col md:flex-row overflow-hidden relative ${mod.role === 'officer' ? '' : ''} ${isTopRank ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-950' : ''}`}>
-                {/* Progress bar line top */}
-                {mod.role !== 'officer' && (
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-zinc-800 z-10">
-                    <div 
-                      className={`h-full transition-all duration-1000 ease-in-out ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                )}
-                
+              <div key={mod.id} className={`group bg-zinc-900 rounded-3xl border border-white/5 hover:border-white/10 shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col md:flex-row overflow-hidden relative transform-gpu ${mod.role === 'officer' ? '' : ''} ${isTopRank ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-950' : ''}`}>
                 <div className={`p-5 sm:p-7 flex-1 flex flex-col justify-between ${mod.role !== 'officer' ? 'pt-7' : ''}`}>
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -473,10 +466,10 @@ export function ModList() {
                       {isTopRank && <Trophy className="w-5 h-5 text-blue-400 ml-1" />}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-3">
-                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-zinc-800">
+                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-white/5">
                         Total Entries: <strong className="text-white ml-1">{mod.entryCount}</strong>
                       </p>
-                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-zinc-800">
+                      <p className="text-xs sm:text-sm text-zinc-400 bg-black px-3 py-1.5 rounded-lg border border-white/5">
                         Last Active: <strong className="text-white ml-1">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
                       </p>
                       {mod.status !== 'blacklisted' && (
@@ -520,7 +513,7 @@ export function ModList() {
                   )}
                 </div>
                 
-                <div className={`w-full md:w-[24rem] flex flex-col border-t md:border-t-0 md:border-l border-zinc-800 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/30' : isCritical ? 'bg-red-950/10' : 'bg-zinc-900/30'}`}>
+                <div className={`w-full md:w-[24rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/30' : isCritical ? 'bg-red-950/10' : 'bg-zinc-900/30'}`}>
                   <div className={`flex-1 flex flex-col p-6 min-h-[70px] ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
                     {mod.role !== 'officer' && (
                       <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-3 ${mod.status === 'blacklisted' ? 'text-zinc-500' : isCritical ? 'text-red-500' : 'text-zinc-400'} text-center`}>
@@ -539,7 +532,7 @@ export function ModList() {
                                    <Link to={`/mod/${m.id}`} className="font-semibold text-white hover:text-blue-400 text-base transition-colors mr-2 truncate">
                                      {m.name}
                                    </Link>
-                                   <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-1 rounded text-zinc-400 font-mono border border-zinc-700/50 shadow-inner -ml-2 sm:ml-0 shrink-0">
+                                   <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-1 rounded text-zinc-400 font-mono border border-white/5 shadow-inner -ml-2 sm:ml-0 shrink-0">
                                      <CountdownTimer deadlineAt={m.deadlineAt} compact />
                                    </span>
                                  </div>
@@ -571,7 +564,7 @@ export function ModList() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" 
+                className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" 
                 onClick={() => setShowAddModal(false)}
               ></motion.div>
               <motion.div 
@@ -579,12 +572,12 @@ export function ModList() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-md border border-zinc-800 z-10"
+                className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-md border border-white/5 z-10 transform-gpu"
               >
                 <form onSubmit={handleAddMod}>
                   <div className="bg-zinc-900 px-6 pb-6 pt-6">
                     <h3 className="text-xl font-bold leading-6 text-white mb-6">Create New Member</h3>
-                    <div className="flex gap-2 mb-6 p-1 rounded-xl bg-black border border-zinc-800">
+                    <div className="flex gap-2 mb-6 p-1 rounded-xl bg-black border border-white/5">
                       <button
                         type="button"
                         onClick={() => { setNewModRole('moderator'); setAddModError(''); }}
@@ -604,7 +597,7 @@ export function ModList() {
                       <label className="block text-sm font-medium text-zinc-300 mb-2">{newModRole === 'moderator' ? 'Moderator' : 'Officer'} Name</label>
                       <input
                         type="text"
-                        className={`block w-full rounded-lg border-zinc-700 bg-black text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border ${addModError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        className={`block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border ${addModError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="e.g. Aman Kumar"
                         value={newModName}
                         onChange={(e) => { setNewModName(e.target.value); setAddModError(''); }}
@@ -618,7 +611,7 @@ export function ModList() {
                       <label className="block text-sm font-medium text-zinc-300 mb-2">WhatsApp Number (with country code)</label>
                       <input
                         type="tel"
-                        className="block w-full rounded-lg border-zinc-700 bg-black text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+                        className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
                         placeholder="e.g. +91 9876543210"
                         value={newModPhone}
                         onChange={(e) => { setNewModPhone(e.target.value); setAddModError(''); }}
@@ -626,7 +619,7 @@ export function ModList() {
                       />
                     </div>
                   </div>
-                  <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-zinc-800">
+                  <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                     <button
                       type="submit"
                       disabled={isSubmitting || !newModName.trim() || !newModPhone.trim()}
@@ -637,7 +630,7 @@ export function ModList() {
                     <button
                       type="button"
                       onClick={() => setShowAddModal(false)}
-                      className="inline-flex w-full justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                      className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                     >
                       Cancel
                     </button>
@@ -648,179 +641,12 @@ export function ModList() {
           </div>
         )}
       </AnimatePresence>
-      <AnimatePresence>
-        {showTermsModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto w-full">
-            <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" 
-                onClick={() => setShowTermsModal(false)}
-              ></motion.div>
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="relative overflow-hidden rounded-[2rem] bg-zinc-900 text-left shadow-2xl w-full max-w-4xl border border-zinc-800 z-10 mx-auto flex flex-col h-[90vh] sm:h-[85vh]"
-              >
-                <div className="bg-zinc-900 px-8 py-6 border-b border-zinc-800 flex items-center justify-between shrink-0">
-                  <h3 className="text-3xl sm:text-4xl font-bold leading-6 text-white flex items-center gap-4">
-                    <ScrollText className="w-10 h-10 text-blue-400" />
-                    Terms And Conditions
-                  </h3>
-                </div>
-                
-                <div className="bg-black px-8 py-6 border-b border-zinc-800">
-                  <div className="flex gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-2xl">
-                    <button
-                      onClick={() => setTermsRoleView('moderator')}
-                      className={`flex-1 px-6 py-4 rounded-xl text-xl font-bold transition-all ${termsRoleView === 'moderator' ? 'bg-blue-600 text-white shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}`}
-                    >
-                      Moderators
-                    </button>
-                    <button
-                      onClick={() => setTermsRoleView('officer')}
-                      className={`flex-1 px-6 py-4 rounded-xl text-xl font-bold transition-all ${termsRoleView === 'officer' ? 'bg-blue-600 text-white shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}`}
-                    >
-                      Officers
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-8 sm:p-10 overflow-y-auto flex-1 text-zinc-300 text-2xl sm:text-3xl space-y-12">
-                  {termsRoleView === 'moderator' ? (
-                    <>
-                      <div className="space-y-8">
-                        <div className="flex gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">1.</span>
-                          <div className="space-y-6 pt-1">
-                            <p className="font-bold text-white text-2xl sm:text-3xl">Provide updates or reports :-</p>
-                            
-                            <div className="pl-6 sm:pl-8 space-y-8">
-                              <div>
-                                <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> user reports</p>
-                                <ul className="pl-10 mt-4 space-y-4 text-zinc-400 leading-relaxed">
-                                  <li className="flex items-center gap-4"><span className="text-blue-500 font-bold">→</span> Bad behaviour of users</li>
-                                  <li className="flex items-center gap-4"><span className="text-blue-500 font-bold">→</span> unauthorised automation</li>
-                                </ul>
-                              </div>
-
-                              <div>
-                                <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> Bot Broken Usages</p>
-                                <ul className="pl-10 mt-4 space-y-4 text-zinc-400 border-l-4 border-zinc-800 ml-4">
-                                  <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> <span className="leading-relaxed">Broken Usages will be counted only if they aren't recorded as &lt;in dev&gt; in <a href="https://usages-ls.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-medium mix-blend-plus-lighter">usages-ls.vercel.app</a></span></li>
-                                </ul>
-                              </div>
-
-                              <div>
-                                <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> user concerns / suggestions for Bot feature</p>
-                              </div>
-
-                              <div>
-                                <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> community activity</p>
-                                <ul className="pl-10 mt-4 space-y-4 text-zinc-400 leading-relaxed">
-                                  <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> participate in community activity</li>
-                                  <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> Make at least one group active for three days</li>
-                                </ul>
-                              </div>
-                            </div>
-
-                            <div className="mt-8 inline-block">
-                              <p className="text-2xl font-bold text-amber-400 px-8 py-4 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                                ( Any two of these )
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-5">
-                        <span className="font-bold text-blue-400 text-3xl sm:text-4xl">2.</span>
-                        <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                          Suggest new ideas or improvements that can benefit the community ( Specially By Mods )
-                        </p>
-                      </div>
-
-                      <div className="flex gap-5">
-                        <span className="font-bold text-blue-400 text-3xl sm:text-4xl">3.</span>
-                        <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                           Help grow the community by bringing in new members (minimum 2)
-                        </p>
-                      </div>
-
-                      <div className="mt-12 pt-12 border-t border-zinc-800 space-y-8">
-                        <p className="font-mono font-bold text-blue-300 text-center bg-blue-500/10 p-8 sm:p-10 rounded-3xl border border-blue-500/30 shadow-inner text-xl sm:text-2xl leading-relaxed">
-                          ——&gt;Any one of the above contributions is sufficient to remain an active moderator&lt;——
-                        </p>
-                        <p className="text-xl sm:text-2xl font-medium text-amber-300 bg-amber-500/10 p-8 rounded-3xl border border-amber-500/20 text-center flex flex-col items-center justify-center gap-6">
-                          <span className="shrink-0 bg-amber-500 text-amber-950 px-5 py-2.5 rounded-xl text-lg uppercase tracking-bold font-black">Note</span>
-                          <span className="leading-relaxed">Regardless of the number of entries you register, your active status timer will always reset from the exact time of your last entry.</span>
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-10">
-                        <div className="flex items-start gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">1.</span>
-                          <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                            Monitor moderators in their job
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">2.</span>
-                          <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                            Always monitor the status of their bot because you don't know if the problem is coming from you
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">3.</span>
-                          <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                            Settle disputes between moderators
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">4.</span>
-                          <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                            Handle what the moderators can't handle
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-5">
-                          <span className="font-bold text-blue-400 text-3xl sm:text-4xl">5.</span>
-                          <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                            Ensuring moderators are not abusing their power to harm others
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-12 pt-12 border-t border-zinc-800">
-                        <p className="font-mono font-bold text-amber-300 text-center bg-amber-500/10 p-8 sm:p-10 rounded-3xl border border-amber-500/30 shadow-inner flex flex-col sm:flex-row items-center justify-center gap-6 text-xl sm:text-2xl leading-relaxed">
-                          <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 shrink-0" />
-                          Officers hold the highest accountability in upholding these standards.
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                <div className="bg-zinc-900 px-8 py-6 flex justify-center border-t border-zinc-800 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowTermsModal(false)}
-                    className="w-full sm:w-auto min-w-[200px] justify-center rounded-2xl border border-transparent bg-blue-600 px-10 py-5 text-xl sm:text-2xl font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all active:scale-[0.98]"
-                  >
-                    I finished reading
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
+      <TermsModal 
+        show={showTermsModal} 
+        onClose={() => setShowTermsModal(false)}
+        roleView={termsRoleView}
+        onRoleViewChange={setTermsRoleView}
+      />
     </div>
   );
 }

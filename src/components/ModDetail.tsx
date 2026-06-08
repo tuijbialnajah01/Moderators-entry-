@@ -339,13 +339,13 @@ export function ModDetail() {
   if (!mod || (mod.status === 'blacklisted' && !isAdmin)) {
     return (
       <div className="flex flex-col h-full bg-black">
-        <header className="h-28 sm:h-32 bg-zinc-900 border-b border-zinc-800 flex items-center px-6 sm:px-16 flex-shrink-0">
+        <header className="h-28 sm:h-32 bg-zinc-900 border-b border-white/5 flex items-center px-6 sm:px-16 flex-shrink-0">
           <Link to="/" className="text-zinc-400 hover:text-white flex items-center gap-4 text-3xl sm:text-4xl font-semibold transition-colors">
              <ArrowLeft className="w-12 h-12" /> Back to Reports
           </Link>
         </header>
         <div className="flex-1 p-8">
-          <div className="bg-zinc-900 p-8 rounded-xl shadow-sm border border-zinc-800 text-center">
+          <div className="bg-zinc-900 p-8 rounded-xl shadow-lg shadow-black/20 border border-white/5 text-center">
               <h2 className="text-xl font-bold text-white">Member Not Found</h2>
           </div>
         </div>
@@ -358,12 +358,12 @@ export function ModDetail() {
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.show && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl transition-opacity backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+              className="bg-zinc-900 border border-white/5 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform-gpu"
             >
               <div className="p-6 text-center">
                 <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${confirmModal.action === 'blacklisted' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
@@ -398,12 +398,12 @@ export function ModDetail() {
         )}
 
         {roleConfirmModal.show && (
-           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl transition-opacity backdrop-blur-md">
+           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+              className="bg-zinc-900 border border-white/5 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform-gpu"
             >
               <div className="p-6 text-center">
                 <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${roleConfirmModal.action === 'demote' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
@@ -439,7 +439,7 @@ export function ModDetail() {
       </AnimatePresence>
 
       {/* Top Header */}
-      <header className="h-28 sm:h-32 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-6 sm:px-16 flex-shrink-0 z-10">
+      <header className="h-28 sm:h-32 bg-zinc-900 border-b border-white/5 flex items-center justify-between px-6 sm:px-16 flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
           <Link to="/" className="text-zinc-400 hover:text-blue-400 flex items-center gap-4 text-3xl sm:text-4xl font-semibold transition-colors">
             <ArrowLeft className="w-12 h-12" /> <span className="hidden sm:inline">Back to Reports</span><span className="inline sm:hidden">Back</span>
@@ -448,7 +448,7 @@ export function ModDetail() {
         <div className="relative">
           <button 
             onClick={() => setShowHeaderMenu(!showHeaderMenu)}
-            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-zinc-700"
+            className="p-4 sm:p-5 rounded-2xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all border border-white/10"
           >
             <Menu className="w-8 h-8 sm:w-12 sm:h-12" />
           </button>
@@ -464,12 +464,12 @@ export function ModDetail() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-zinc-800 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
+                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
                 >
                   {isAdmin && (
                     <button 
                       onClick={() => { setShowEntryModal(true); setShowHeaderMenu(false); }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-sm w-full"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full"
                     >
                       <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                       <span>Create New Entry</span>
@@ -485,8 +485,8 @@ export function ModDetail() {
       {/* Content Area */}
       <div className="p-4 sm:p-8 flex-1 max-w-5xl mx-auto w-full overflow-y-auto pb-10 space-y-4 sm:space-y-6">
         {/* Profile Card */}
-        <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 overflow-hidden flex flex-col md:flex-row shrink-0">
-          <div className="p-6 md:p-8 flex-1 border-b md:border-b-0 md:border-r border-zinc-800">
+        <div className="bg-zinc-900 rounded-xl shadow-lg shadow-black/20 border border-white/5 overflow-hidden flex flex-col md:flex-row shrink-0">
+          <div className="p-6 md:p-8 flex-1 border-b md:border-b-0 md:border-r border-white/5">
             <div className="flex flex-col mb-4 gap-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                  <div className="flex items-center gap-3">
@@ -536,7 +536,7 @@ export function ModDetail() {
                           setEditProfilePhone(mod.phoneNumber || ''); 
                           setEditProfileError(''); 
                         }} 
-                        className="p-1.5 sm:px-3 sm:py-2 bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-700 flex items-center gap-2 text-xs sm:text-sm font-semibold"
+                        className="p-1.5 sm:px-3 sm:py-2 bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors border border-white/10 flex items-center gap-2 text-xs sm:text-sm font-semibold"
                         title="Edit Profile"
                       >
                         <Pencil className="w-4 h-4" />
@@ -557,7 +557,7 @@ export function ModDetail() {
                       {mod.phoneNumber}
                     </a>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-500 font-mono text-sm border border-zinc-700 shadow-inner flex items-center gap-2 max-w-fit">
+                    <span className="px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-500 font-mono text-sm border border-white/10 shadow-inner flex items-center gap-2 max-w-fit">
                       No phone added
                     </span>
                   )}
@@ -566,7 +566,7 @@ export function ModDetail() {
                       href={`https://wa.me/${mod.phoneNumber.replace(/\D/g, '')}`} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2 sm:px-3 py-1.5 rounded-md transition-all font-medium border border-emerald-500/50 shadow-sm ml-1 flex items-center gap-1.5 active:scale-95"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2 sm:px-3 py-1.5 rounded-md transition-all font-medium border border-emerald-500/50 shadow-lg shadow-black/20 ml-1 flex items-center gap-1.5 active:scale-95"
                     >
                       Message
                     </a>
@@ -584,7 +584,7 @@ export function ModDetail() {
               Total Entries: <span className="font-semibold text-white">{entries.length}</span>
             </div>
           </div>
-          <div className={`p-6 md:p-8 flex flex-col items-center justify-center border-t md:border-t-0 border-zinc-800 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-zinc-900/50' : 'bg-black/50'}`}>
+          <div className={`p-6 md:p-8 flex flex-col items-center justify-center border-t md:border-t-0 border-white/5 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-zinc-900/50' : 'bg-black/50'}`}>
             <p className="text-xs uppercase tracking-widest font-bold mb-3 text-zinc-500">
               {mod.status === 'blacklisted' ? 'Account Status' : mod.role === 'officer' ? 'Role' : 'Time Remaining'}
             </p>
@@ -594,7 +594,7 @@ export function ModDetail() {
                 <span className="text-xl uppercase tracking-tighter">Blacklisted</span>
               </div>
             ) : mod.role === 'officer' ? (
-               <div className="text-zinc-400 font-bold text-center px-6 py-4 border border-zinc-700/50 rounded-xl bg-zinc-800/30">
+               <div className="text-zinc-400 font-bold text-center px-6 py-4 border border-white/10/50 rounded-xl bg-zinc-800/30">
                  <ShieldCheck className="w-8 h-8 mx-auto mb-2" />
                  <span className="text-xl uppercase tracking-tighter">Officer</span>
                </div>
@@ -606,9 +606,8 @@ export function ModDetail() {
         
         {/* Dependent Content Area */}
         {mod.role === 'officer' && (
-          <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 overflow-hidden shrink-0 flex flex-col">
-            <div className="px-6 py-5 border-b border-zinc-800 bg-zinc-800/50 flex justify-between items-center">
-               <h4 className="text-lg font-bold text-white">Managed Moderators</h4>
+          <div className="bg-zinc-900 rounded-xl shadow-lg shadow-black/20 border border-white/5 overflow-hidden shrink-0 flex flex-col">
+            <div className="px-6 py-5 border-b border-white/5 bg-zinc-800/50 flex justify-between items-center">
                {isAdmin && (
                  <button
                    onClick={() => setShowAssignModal(true)}
@@ -622,7 +621,7 @@ export function ModDetail() {
             
             <div className="p-6">
               {allMods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 ? (
-                <div className="text-center py-12 bg-zinc-800/50 rounded-lg border border-dashed border-zinc-700">
+                <div className="text-center py-12 bg-zinc-800/50 rounded-lg border border-dashed border-white/10">
                    <p className="text-sm text-zinc-400 font-medium">No moderators assigned to this officer.</p>
                    {isAdmin && <p className="text-xs text-zinc-500 mt-1">Click "Add Moderator" to assign one.</p>}
                 </div>
@@ -637,13 +636,7 @@ export function ModDetail() {
                     const progress = assignedMod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeftMs / totalMs) * 100));
                     
                     return (
-                    <li key={assignedMod.id} className="p-4 bg-black border border-zinc-800 rounded-xl text-zinc-300 font-bold marker:text-zinc-500 overflow-hidden relative">
-                      <div className="absolute top-0 left-0 h-1 bg-zinc-800 w-full">
-                        <div 
-                          className={`h-full transition-all duration-1000 ease-in-out ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
+                    <li key={assignedMod.id} className="p-4 bg-black border border-white/5 rounded-xl text-zinc-300 font-bold marker:text-zinc-500 overflow-hidden relative">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full inline-flex align-top -ml-1 mt-1 sm:mt-0 pt-2">
                         <div className="mb-3 sm:mb-0 ml-2">
                           <Link to={`/mod/${assignedMod.id}`} className="font-bold text-white hover:text-blue-400 transition-colors text-xl sm:text-2xl block">
@@ -654,7 +647,7 @@ export function ModDetail() {
                           )}
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto font-normal ml-2 sm:ml-0">
-                          <div className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm shadow-inner relative z-10">
+                          <div className="bg-zinc-900 border border-white/5 rounded px-2 py-1 text-sm shadow-inner relative z-10">
                             <CountdownTimer deadlineAt={assignedMod.deadlineAt} compact />
                           </div>
                           {isAdmin && (
@@ -676,14 +669,14 @@ export function ModDetail() {
           </div>
         )}
         
-        <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 overflow-hidden shrink-0 flex flex-col">
-          <div className="px-6 py-5 border-b border-zinc-800 bg-zinc-800/50 flex justify-between items-center">
+        <div className="bg-zinc-900 rounded-xl shadow-lg shadow-black/20 border border-white/5 overflow-hidden shrink-0 flex flex-col">
+          <div className="px-6 py-5 border-b border-white/5 bg-zinc-800/50 flex justify-between items-center">
              <h4 className="text-lg font-bold text-white">Entries Log</h4>
           </div>
           
           <div className="p-6">
             {entries.length === 0 ? (
-              <div className="text-center py-12 bg-zinc-800/50 rounded-lg border border-dashed border-zinc-700">
+              <div className="text-center py-12 bg-zinc-800/50 rounded-lg border border-dashed border-white/10">
                  <p className="text-sm text-zinc-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
                  <p className="text-xs text-zinc-500 mt-1">When entries are added, they will appear here.</p>
               </div>
@@ -691,11 +684,11 @@ export function ModDetail() {
               <div className="pl-8 pr-2 py-2">
                 <ol reversed className="list-decimal list-outside space-y-6 text-zinc-300 marker:text-zinc-500 marker:font-bold">
                   {entries.map((entry) => (
-                    <li key={entry.id} className="pl-2 border-b border-zinc-800/50 pb-6 last:border-0 last:pb-0 relative group">
+                    <li key={entry.id} className="pl-2 border-b border-white/5/50 pb-6 last:border-0 last:pb-0 relative group">
                       <div className="flex flex-col gap-1.5">
                         <span className="text-zinc-200 font-medium whitespace-pre-wrap">{entry.text}</span>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-zinc-400 font-mono text-xs bg-black inline-block px-2 py-1 rounded border border-zinc-800">
+                          <span className="text-zinc-400 font-mono text-xs bg-black inline-block px-2 py-1 rounded border border-white/5">
                             {new Date(entry.createdAt).toLocaleString()}
                           </span>
                           {isAdmin && (
@@ -727,8 +720,8 @@ export function ModDetail() {
       {showEntryModal && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" onClick={() => setShowEntryModal(false)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-zinc-800 z-10 mx-auto">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowEntryModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-white/5 z-10 mx-auto transform-gpu">
               <form onSubmit={handleAddEntry}>
                 <div className="bg-zinc-900 px-6 pb-6 pt-6">
                   <h3 className="text-xl font-bold leading-6 text-white mb-2">New Entry for {mod.name}</h3>
@@ -737,7 +730,7 @@ export function ModDetail() {
                     <label className="block text-sm font-medium text-zinc-300 mb-2">Entry Details</label>
                     <textarea
                       rows={4}
-                      className="block w-full rounded-lg border-zinc-700 bg-black text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border resize-none"
+                      className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border resize-none"
                       placeholder="e.g. Activity recorded at link..."
                       value={entryText}
                       onChange={(e) => setEntryText(e.target.value)}
@@ -745,7 +738,7 @@ export function ModDetail() {
                     />
                   </div>
                 </div>
-                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-zinc-800">
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                   <button
                     type="submit"
                     disabled={isSubmitting || !entryText.trim()}
@@ -756,7 +749,7 @@ export function ModDetail() {
                   <button
                     type="button"
                     onClick={() => setShowEntryModal(false)}
-                    className="inline-flex w-full justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                    className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                   >
                     Cancel
                   </button>
@@ -771,8 +764,8 @@ export function ModDetail() {
       {entryToDelete && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" onClick={() => setEntryToDelete(null)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-sm border border-zinc-800 z-10 mx-auto">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setEntryToDelete(null)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-sm border border-white/5 z-10 mx-auto transform-gpu">
                 <div className="bg-zinc-900 px-6 pb-6 pt-6 flex flex-col items-center sm:items-start text-center sm:text-left">
                   <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 sm:mx-0 sm:h-10 sm:w-10 mb-4 border border-red-500/20">
                     <Trash2 className="h-6 w-6 text-red-500" />
@@ -780,7 +773,7 @@ export function ModDetail() {
                   <h3 className="text-lg font-bold leading-6 text-white mb-2">Delete Entry?</h3>
                   <p className="text-sm text-zinc-400">Are you sure you want to delete this entry? This will revert the timer back to the previous entry state. This action cannot be undone.</p>
                 </div>
-                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-zinc-800">
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                   <button
                     type="button"
                     disabled={isDeleting}
@@ -792,7 +785,7 @@ export function ModDetail() {
                   <button
                     type="button"
                     onClick={() => setEntryToDelete(null)}
-                    className="inline-flex w-full justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                    className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                   >
                     Cancel
                   </button>
@@ -806,8 +799,8 @@ export function ModDetail() {
       {showEditProfileModal && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" onClick={() => setShowEditProfileModal(false)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-lg border border-zinc-800 z-10 mx-auto">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowEditProfileModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-lg border border-white/5 z-10 mx-auto transform-gpu">
               <form onSubmit={handleEditProfile}>
                 <div className="bg-zinc-900 px-6 pb-6 pt-6">
                   <h3 className="text-xl font-bold leading-6 text-white mb-6">Edit Profile</h3>
@@ -823,7 +816,7 @@ export function ModDetail() {
                       <label className="block text-sm font-medium text-zinc-300 mb-2">{mod.role === 'officer' ? 'Officer Name' : 'Moderator Name'}</label>
                       <input
                         type="text"
-                        className="block w-full rounded-lg border-zinc-700 bg-black text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+                        className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
                         value={editProfileName}
                         onChange={(e) => { setEditProfileName(e.target.value); setEditProfileError(''); }}
                         required
@@ -833,7 +826,7 @@ export function ModDetail() {
                       <label className="block text-sm font-medium text-zinc-300 mb-2">WhatsApp Number (with country code)</label>
                       <input
                         type="tel"
-                        className="block w-full rounded-lg border-zinc-700 bg-black text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+                        className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
                         placeholder="e.g. +91 9876543210"
                         value={editProfilePhone}
                         onChange={(e) => { setEditProfilePhone(e.target.value); setEditProfileError(''); }}
@@ -842,7 +835,7 @@ export function ModDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-zinc-800">
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                   <button
                     type="submit"
                     disabled={isSavingProfile || !editProfileName.trim() || !editProfilePhone.trim()}
@@ -853,7 +846,7 @@ export function ModDetail() {
                   <button
                     type="button"
                     onClick={() => setShowEditProfileModal(false)}
-                    className="inline-flex w-full justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                    className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                   >
                     Cancel
                   </button>
@@ -869,8 +862,8 @@ export function ModDetail() {
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
             <div className="fixed inset-0 bg-black/40 backdrop-blur-xl transition-opacity" onClick={() => setShowAssignModal(false)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-lg border border-zinc-800 z-10 mx-auto flex flex-col max-h-[80vh]">
-              <div className="bg-zinc-900 px-6 py-5 border-b border-zinc-800">
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-lg border border-white/5 z-10 mx-auto flex flex-col max-h-[80vh]">
+              <div className="bg-zinc-900 px-6 py-5 border-b border-white/5">
                 <h3 className="text-xl font-bold leading-6 text-white">Assign Moderator</h3>
                 <p className="text-sm text-zinc-400 mt-1">Select an active moderator to assign to this officer.</p>
               </div>
@@ -882,7 +875,7 @@ export function ModDetail() {
                 ) : (
                   <div className="grid gap-3">
                     {allMods.filter(m => m.role !== 'officer' && m.status !== 'blacklisted' && !m.officerIds?.includes(mod.id) && m.officerId !== mod.id).map(unassignedMod => (
-                      <div key={unassignedMod.id} className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors">
+                      <div key={unassignedMod.id} className="flex items-center justify-between p-4 bg-zinc-900 border border-white/5 rounded-xl hover:border-white/10 transition-colors">
                         <div>
                           <p className="font-bold text-white text-xl sm:text-2xl">{unassignedMod.name}</p>
                         </div>
@@ -898,11 +891,11 @@ export function ModDetail() {
                   </div>
                 )}
               </div>
-              <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse border-t border-zinc-800 shrink-0">
+              <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse border-t border-white/5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAssignModal(false)}
-                  className="inline-flex w-full justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+                  className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                 >
                   Close
                 </button>

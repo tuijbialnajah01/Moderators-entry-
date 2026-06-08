@@ -48,10 +48,10 @@ export function CountdownTimer({ deadlineAt, compact = false }: { deadlineAt: nu
   }
 
   const boxClasses = isCritical 
-    ? "text-2xl sm:text-3xl font-mono font-bold block bg-red-950/30 p-2 sm:p-3 border border-red-900/50 rounded-xl shadow-sm text-red-500 w-[56px] sm:w-[72px]"
+    ? "text-2xl sm:text-3xl font-mono font-bold block bg-red-500/10 p-2 sm:p-3 border border-red-500/20 rounded-xl shadow-lg shadow-black/20 text-red-500 w-[56px] sm:w-[72px]"
     : isWarning
-      ? "text-2xl sm:text-3xl font-mono font-bold block bg-amber-950/30 p-2 sm:p-3 border border-amber-900/50 rounded-xl shadow-sm text-amber-500 w-[56px] sm:w-[72px]"
-      : "text-2xl sm:text-3xl font-mono font-bold block bg-zinc-900 p-2 sm:p-3 border border-zinc-800 rounded-xl shadow-sm text-zinc-100 w-[56px] sm:w-[72px]";
+      ? "text-2xl sm:text-3xl font-mono font-bold block bg-amber-500/10 p-2 sm:p-3 border border-amber-500/20 rounded-xl shadow-lg shadow-black/20 text-amber-500 w-[56px] sm:w-[72px]"
+      : "text-2xl sm:text-3xl font-mono font-bold block bg-zinc-900 p-2 sm:p-3 border border-white/5 rounded-xl shadow-lg shadow-black/20 text-zinc-100 w-[56px] sm:w-[72px]";
 
   const labelClasses = "text-[10px] sm:text-xs uppercase font-bold tracking-widest text-zinc-500 mt-1.5 block";
 
