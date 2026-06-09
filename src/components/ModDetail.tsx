@@ -643,6 +643,11 @@ export function ModDetail() {
                 <span className="text-amber-500/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">Accumulated Merit</span>
                 <span className="font-black text-amber-400 text-5xl sm:text-7xl ml-auto tracking-tighter">{mod.totalPoints || 0}</span>
               </div>
+              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-purple-500/5 p-6 rounded-3xl border border-purple-500/10 shadow-inner col-span-full">
+                <span className="w-3 h-3 rounded-full shrink-0 bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]"></span>
+                <span className="text-purple-400/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">P/E Ratio <span className="lowercase text-zinc-500 font-normal tracking-normal">(Points to Entry)</span></span>
+                <span className="font-black text-purple-400 text-3xl sm:text-4xl ml-auto tracking-tighter">{entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00'}</span>
+              </div>
             </div>
           </div>
           <div className={`p-8 sm:p-12 md:w-[28rem] flex flex-col items-center justify-center border-t md:border-t-0 border-white/5 ${(mod.status === 'blacklisted' || mod.role === 'officer') ? 'bg-zinc-900/60' : 'bg-black/40'}`}>
@@ -709,9 +714,12 @@ export function ModDetail() {
                             {assignedMod.phoneNumber && (
                               <div className="text-xs text-zinc-500 font-mono font-normal">{assignedMod.phoneNumber}</div>
                             )}
-                            <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-500/20">
+                            <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-500/20" title="Points">
                               <Trophy className="w-2.5 h-2.5" />
                               {assignedMod.totalPoints || 0} pts
+                            </div>
+                            <div className="flex items-center gap-1 bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-500/20" title="P/E Ratio">
+                              P/E {assignedMod.entryCount > 0 ? ((assignedMod.totalPoints || 0) / assignedMod.entryCount).toFixed(1) : '0.0'}
                             </div>
                           </div>
                         </div>

@@ -488,6 +488,12 @@ export function ModList() {
                           {mod.totalPoints || 0}
                         </strong>
                       </p>
+                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
+                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">P/E</span>
+                        <strong className="text-xl sm:text-3xl text-purple-400 font-black">
+                          {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
+                        </strong>
+                      </p>
                       <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[160px]">
                         <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Last Active</span>
                         <strong className="text-xl sm:text-2xl text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
@@ -554,9 +560,12 @@ export function ModList() {
                                      {m.name}
                                    </Link>
                                    <div className="flex items-center gap-3 shrink-0">
-                                     <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20">
+                                     <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20" title="Points">
                                        <Trophy className="w-3.5 h-3.5" />
                                        {m.totalPoints || 0}
+                                     </div>
+                                     <div className="flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-xl text-xs font-black border border-purple-500/20" title="P/E Ratio">
+                                       P/E {m.entryCount > 0 ? ((m.totalPoints || 0) / m.entryCount).toFixed(1) : '0.0'}
                                      </div>
                                      <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
                                        <CountdownTimer deadlineAt={m.deadlineAt} compact />
