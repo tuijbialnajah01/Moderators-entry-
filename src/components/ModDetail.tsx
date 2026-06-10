@@ -119,11 +119,24 @@ export function ModDetail() {
       setAllMods(fetchedMods);
     });
 
+    const honorLogsRef = collection(db, 'mods', id, 'honor_logs');
+    const qHonor = query(honorLogsRef, orderBy('createdAt', 'desc'));
+    const unsubscribeHonorLogs = onSnapshot(qHonor, (snapshot) => {
+      const fetchedLogs: HonorLog[] = [];
+      snapshot.forEach((doc) => {
+        fetchedLogs.push({ id: doc.id, ...doc.data() } as HonorLog);
+      });
+      setHonorLogs(fetchedLogs);
+    }, (error) => {
+      console.error('Failed to subscribe to honor logs', error);
+    });
+
     return () => {
       unsubscribeMod();
       unsubscribeEntries();
       unsubscribeDrafts();
       unsubscribeAllMods();
+      unsubscribeHonorLogs();
     };
   }, [id, user, isAdmin]);
 
@@ -228,11 +241,10 @@ export function ModDetail() {
       // Helper to strip non-standard characters for jsPDF stability
       const safeText = (text: string) => {
         if (!text) return "N/A";
-        // Standard PDF fonts only support a limited character set without embedding.
-        // We normalize and strip anything outside the printable ASCII range for maximum reliability.
+        // Latin-1 Supplement contains symbols like Ø, Ý, etc. which are often supported by standard fonts
         return text
           .normalize("NFKD")
-          .replace(/[^\x20-\x7E\s]/g, "")
+          .replace(/[^\x20-\xFF\s]/g, "") // Allow Latin-1 range (extended ASCII)
           .replace(/\s+/g, " ")
           .trim() || "Unit Detail";
       };
@@ -373,6 +385,61 @@ export function ModDetail() {
       alert('Failed to update draft.');
     } finally {
       setIsEditingDraft(false);
+    }
+  };
+
+  const handleAddHonor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !user || !mod || !honorChangeReason.trim() || isSubmittingHonor) return;
+
+    setIsSubmittingHonor(true);
+    try {
+      const batch = writeBatch(db);
+      const honorLogId = crypto.randomUUID();
+      const honorLogRef = doc(db, `mods/${id}/honor_logs/${honorLogId}`);
+      
+      const now = Date.now();
+      batch.set(honorLogRef, {
+        amount: honorChangeAmount,
+        reason: honorChangeReason.trim(),
+        createdAt: now,
+        createdBy: user.uid,
+        type: 'manual'
+      });
+
+      const modRef = doc(db, 'mods', id);
+      batch.update(modRef, {
+        honorScore: (mod.honorScore ?? 100) + honorChangeAmount,
+        updatedAt: now
+      });
+
+      await batch.commit();
+      setShowHonorModal(false);
+      setHonorChangeReason('');
+      setHonorChangeAmount(1);
+    } catch (error) {
+      console.error('Failed to add honor log', error);
+      alert('Failed to adjust honor score.');
+    } finally {
+      setIsSubmittingHonor(false);
+    }
+  };
+
+  const handleDeleteHonorLog = async (logId: string, amount: number) => {
+    if (!id || !isAdmin || !mod) return;
+    if (!window.confirm('Delete this log and revert the honor points?')) return;
+
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, `mods/${id}/honor_logs/${logId}`));
+      batch.update(doc(db, 'mods', id), {
+        honorScore: (mod.honorScore ?? 100) - amount,
+        updatedAt: Date.now()
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error('Failed to delete honor log', error);
+      alert('Failed to delete log.');
     }
   };
 
@@ -761,13 +828,15 @@ export function ModDetail() {
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
                 >
                   <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
-                      className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
-                    >
-                      <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
-                      <span>Add Performance Draft</span>
-                    </button>
+                    {user && (
+                      <button 
+                        onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
+                        className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Add Performance Draft</span>
+                      </button>
+                    )}
                     <button 
                       onClick={() => { handleExportPDF(); setShowHeaderMenu(false); }}
                       className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
@@ -775,6 +844,15 @@ export function ModDetail() {
                       <Download className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
                       <span>PDF Report</span>
                     </button>
+                    {isAdmin && (
+                      <button 
+                        onClick={() => { setShowHonorModal(true); setShowHeaderMenu(false); }}
+                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <Trophy className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Adjust Honor Score</span>
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               </>
@@ -1086,26 +1164,28 @@ export function ModDetail() {
                                 +{draft.points} pts
                               </span>
                             )}
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => {
-                                  setDraftToEdit(draft);
-                                  setEditDraftText(draft.text || '');
-                                  setEditDraftPoints(draft.points || 1);
-                                }}
-                                className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white px-3 py-1 rounded-lg border border-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
-                              >
-                                <Pencil className="w-3 h-3" />
-                                <span>Edit</span>
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteDraft(draft.id!)}
-                                className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-3 py-1 rounded-lg border border-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
+                            {user && (
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setDraftToEdit(draft);
+                                    setEditDraftText(draft.text || '');
+                                    setEditDraftPoints(draft.points || 1);
+                                  }}
+                                  className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white px-3 py-1 rounded-lg border border-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteDraft(draft.id!)}
+                                  className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-3 py-1 rounded-lg border border-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mt-1">
@@ -1122,6 +1202,64 @@ export function ModDetail() {
           </div>
         )}
         
+        {/* Honor Adjustment Logs */}
+        <div className="shrink-0 space-y-6 pt-12 border-t border-white/5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-3xl font-black text-white uppercase tracking-[0.2em] flex items-center gap-4">
+              <Trophy className="w-10 h-10 text-emerald-400" strokeWidth={3} />
+              Honor Standing Ledger
+            </h3>
+            <span className="bg-zinc-800 text-zinc-500 text-xs font-black px-4 py-1.5 rounded-full border border-white/5 uppercase tracking-[0.2em]">
+              Verified Records: {honorLogs.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {honorLogs.length === 0 ? (
+              <div className="bg-zinc-900/30 border border-dashed border-white/10 rounded-[2rem] p-16 text-center">
+                <Trophy className="w-16 h-16 text-zinc-800 mx-auto mb-4 opacity-50" />
+                <p className="text-zinc-600 font-black text-xl uppercase tracking-widest">No honor standing adjustments recorded.</p>
+              </div>
+            ) : (
+              honorLogs.map((log) => (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  key={log.id}
+                  className="bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl hover:bg-zinc-900/60 transition-all group"
+                >
+                  <div className="p-8 sm:p-10 flex items-start gap-8">
+                    <div className={`w-20 h-20 rounded-[1.5rem] shrink-0 flex items-center justify-center text-3xl font-black shadow-2xl ${log.amount >= 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
+                      {log.amount > 0 ? `+${log.amount}` : log.amount}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                         <div className="flex items-center gap-3">
+                            <span className="text-zinc-500 font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+                              <RotateCcw className="w-4 h-4" />
+                              {new Date(log.createdAt).toLocaleString()}
+                            </span>
+                            {log.type === 'entry_auto' && (
+                              <span className="bg-blue-500/10 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">Automated System Log</span>
+                            )}
+                         </div>
+                         {isAdmin && (
+                           <button 
+                             onClick={() => handleDeleteHonorLog(log.id!, log.amount)}
+                             className="text-zinc-700 hover:text-red-500 transition-all p-2 bg-black/20 rounded-xl border border-transparent hover:border-red-500/20"
+                           >
+                             <Trash2 className="w-6 h-6" />
+                           </button>
+                         )}
+                      </div>
+                      <p className="text-zinc-100 text-2xl leading-relaxed font-bold tracking-tight">{log.reason}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Footer System Info */}
         <div className="text-[5px] text-zinc-400 flex justify-between uppercase tracking-tighter mt-2">
           <span>Profile View Active</span>
@@ -1256,6 +1394,87 @@ export function ModDetail() {
                     type="button"
                     className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
                     onClick={() => setDraftToEdit(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Honor Modal */}
+      {showHonorModal && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowHonorModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-[2rem] bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-white/5 z-10 mx-auto transform-gpu">
+              <form onSubmit={handleAddHonor}>
+                <div className="bg-zinc-900 px-8 pb-8 pt-8">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                      <Trophy className="w-8 h-8 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black leading-6 text-white uppercase tracking-wider">Adjust Honor Standing</h3>
+                      <p className="text-zinc-500 text-sm font-bold mt-1">Current Score: <span className="text-white">{mod.honorScore ?? 100}</span></p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div>
+                      <label className="block text-xs font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Adjustment Reason</label>
+                      <textarea
+                        rows={3}
+                        className="block w-full rounded-2xl border-white/10 bg-black text-white shadow-inner focus:border-emerald-500 focus:ring-emerald-500 text-lg p-5 border resize-none transition-all placeholder:text-zinc-700 font-bold"
+                        placeholder="Why is this adjustment being made? (e.g. Community behavior, event performance...)"
+                        value={honorChangeReason}
+                        onChange={(e) => setHonorChangeReason(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">Points Adjustment</label>
+                      <div className="flex items-center gap-6">
+                        <div className="flex-1 flex gap-2">
+                          {[ -10, -5, -2, 2, 5, 10 ].map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => setHonorChangeAmount(amt)}
+                              className={`flex-1 py-4 rounded-xl border text-xl font-black transition-all active:scale-95 ${honorChangeAmount === amt ? 'bg-emerald-600 border-white/20 text-white shadow-xl shadow-emerald-900/40' : 'bg-black border-white/5 text-zinc-500 hover:border-white/20 hover:text-white'}`}
+                            >
+                              {amt > 0 ? `+${amt}` : amt}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="w-32 bg-zinc-950 p-2 rounded-2xl border border-white/10 flex flex-col items-center">
+                          <span className="text-[10px] font-black text-zinc-600 uppercase mb-1">Custom</span>
+                          <input 
+                            type="number"
+                            value={honorChangeAmount.toString()}
+                            onChange={(e) => setHonorChangeAmount(parseInt(e.target.value) || 0)}
+                            className="bg-transparent text-white font-black text-2xl w-full text-center focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-zinc-800/50 px-8 py-6 flex flex-row-reverse gap-4 border-t border-white/5">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingHonor || !honorChangeReason.trim()}
+                    className="flex-1 sm:flex-none inline-flex justify-center rounded-2xl border border-transparent bg-emerald-600 px-8 py-4 text-lg font-black text-white shadow-xl shadow-emerald-900/20 hover:bg-emerald-500 focus:outline-none transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50"
+                  >
+                    {isSubmittingHonor ? 'Verifying...' : 'Finalize Adjustment'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowHonorModal(false)}
+                    className="flex-1 sm:flex-none inline-flex justify-center rounded-2xl border border-white/10 bg-zinc-800 px-8 py-4 text-lg font-black text-zinc-300 shadow-lg hover:bg-zinc-700 focus:outline-none transition-all active:scale-95 uppercase tracking-widest"
                   >
                     Cancel
                   </button>
