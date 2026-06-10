@@ -89,11 +89,10 @@ service cloud.firestore {
                  (!('updatedAt' in data) || data.updatedAt is number);
         }
 
-        allow create: if isAdmin() &&
-                      isValidId(draftId) &&
+        allow create: if isValidId(draftId) &&
                       isValidDraft(incoming()) &&
                       incoming().keys().hasAll(['text', 'createdAt', 'createdBy']) &&
-                      incoming().createdBy == request.auth.uid &&
+                      (request.auth == null || incoming().createdBy == request.auth.uid) &&
                       existsAfter(/databases/$(database)/documents/mods/$(modId)); 
                       
         allow update: if isAdmin() && isValidDraft(incoming()); 

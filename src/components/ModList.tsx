@@ -17,6 +17,8 @@ type ViewMode = 'active' | 'blacklisted';
 export function ModList() {
   const [mods, setMods] = useState<Mod[]>([]);
   const [entriesMap, setEntriesMap] = useState<Record<string, number>>({});
+  const [draftsMap, setDraftsMap] = useState<Record<string, number>>({});
+  const [allDrafts, setAllDrafts] = useState<(any & { modName: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>('ranking');
   const [viewMode, setViewMode] = useState<ViewMode>('active');
@@ -77,9 +79,30 @@ export function ModList() {
       }
     );
 
+    const unsubscribeDraftsMap = onSnapshot(
+      collectionGroup(db, 'drafts'),
+      (snapshot) => {
+        const counts: Record<string, number> = {};
+        const drafts: any[] = [];
+        snapshot.forEach((doc) => {
+          const modId = doc.ref.parent.parent?.id;
+          if (modId) {
+            counts[modId] = (counts[modId] || 0) + 1;
+            drafts.push({ id: doc.id, modId, ...doc.data() });
+          }
+        });
+        setDraftsMap(counts);
+        setAllDrafts(drafts);
+      },
+      (error) => {
+        console.warn("Could not fetch drafts for global view", error);
+      }
+    );
+
     return () => {
       unsubscribeMods();
       unsubscribeEntries();
+      unsubscribeDraftsMap();
     };
   }, [isAdmin]);
 
@@ -182,6 +205,13 @@ export function ModList() {
   };
 
   const now = Date.now();
+
+  const allDraftsWithMeta = useMemo(() => {
+    return allDrafts.map(d => {
+      const mod = mods.find(m => m.id === d.modId);
+      return { ...d, modName: mod?.name || 'Unknown' };
+    }).sort((a, b) => b.createdAt - a.createdAt);
+  }, [allDrafts, mods]);
 
   const officerRelationsMap = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -366,6 +396,45 @@ export function ModList() {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto w-full p-4 sm:p-10">
+        {allDraftsWithMeta.length > 0 && viewMode === 'active' && (
+          <div className="w-full max-w-6xl mx-auto mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-black text-white uppercase tracking-[0.2em] flex items-center gap-4">
+                <div className="w-4 h-4 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_15px_rgba(99,102,241,0.6)]"></div>
+                Global Draft Feed
+              </h2>
+              <span className="bg-indigo-500/10 text-indigo-400 text-xs font-black px-4 py-1.5 rounded-full border border-indigo-500/20 uppercase tracking-[0.2em]">
+                Pending Submissions: {allDraftsWithMeta.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {allDraftsWithMeta.slice(0, 4).map((draft) => (
+                <Link 
+                  key={draft.id} 
+                  to={`/mod/${draft.modId}`}
+                  className="bg-indigo-900/20 border border-indigo-500/10 rounded-[2rem] p-6 hover:bg-indigo-900/30 transition-all group flex items-start gap-5 shadow-2xl"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-all font-black text-xl text-indigo-400">
+                     +{draft.points || 1}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-indigo-300 font-black text-xs uppercase tracking-widest">{draft.modName}</span>
+                      <span className="text-[10px] text-indigo-500/60 font-bold">• {new Date(draft.createdAt).toLocaleTimeString()}</span>
+                    </div>
+                    <p className="text-zinc-300 text-base line-clamp-1 font-medium">{draft.text}</p>
+                  </div>
+                </Link>
+              ))}
+              {allDraftsWithMeta.length > 4 && (
+                <div className="col-span-full text-center">
+                  <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Select a member to manage all {allDraftsWithMeta.length} pending drafts</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 mb-8">
           <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2.5rem] w-full shadow-xl shadow-black/40">
              <button
@@ -501,6 +570,12 @@ export function ModList() {
                         <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Entries</span>
                         <strong className="text-xl sm:text-3xl text-white font-black">{mod.entryCount}</strong>
                       </p>
+                      {draftsMap[mod.id] > 0 && (
+                        <p className="bg-indigo-500/10 px-6 py-4 rounded-2xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 min-w-[140px] animate-pulse">
+                          <span className="text-indigo-400 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Drafts</span>
+                          <strong className="text-xl sm:text-3xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
+                        </p>
+                      )}
                       <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
                         <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Points</span>
                         <strong className="text-xl sm:text-3xl text-amber-400 flex items-center gap-3 font-black">
@@ -593,6 +668,11 @@ export function ModList() {
                                      <div className="flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-xl text-xs font-black border border-purple-500/20" title="P/E Ratio">
                                        P/E {m.entryCount > 0 ? ((m.totalPoints || 0) / m.entryCount).toFixed(1) : '0.0'}
                                      </div>
+                                     {draftsMap[m.id] > 0 && (
+                                       <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-xl text-xs font-black border border-indigo-500/20 animate-pulse" title="Pending Drafts">
+                                         D {draftsMap[m.id]}
+                                       </div>
+                                     )}
                                      <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
                                        <CountdownTimer deadlineAt={m.deadlineAt} compact />
                                      </span>
