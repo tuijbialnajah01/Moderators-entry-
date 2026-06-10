@@ -20,11 +20,7 @@ export function ModDetail() {
   const [loading, setLoading] = useState(true);
   const { user, isAdmin, loading: authLoading } = useAuth();
   
-  const [showEntryModal, setShowEntryModal] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
-  const [entryText, setEntryText] = useState('');
-  const [selectedPoints, setSelectedPoints] = useState<number>(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit Entry state
   const [entryToEdit, setEntryToEdit] = useState<Entry | null>(null);
@@ -35,6 +31,7 @@ export function ModDetail() {
   // Deletion state
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit Profile state
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -51,7 +48,6 @@ export function ModDetail() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  // Drafts state
   const [drafts, setDrafts] = useState<Entry[]>([]);
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [draftText, setDraftText] = useState('');
@@ -114,18 +110,6 @@ export function ModDetail() {
       console.error('Failed to subscribe to drafts', error);
     });
 
-    const honorLogsRef = collection(db, 'mods', id, 'honor_logs');
-    const qHonorLogs = query(honorLogsRef, orderBy('createdAt', 'desc'));
-    const unsubscribeHonorLogs = onSnapshot(qHonorLogs, (snapshot) => {
-      const fetchedHonorLogs: HonorLog[] = [];
-      snapshot.forEach((doc) => {
-        fetchedHonorLogs.push({ id: doc.id, ...doc.data() } as HonorLog);
-      });
-      setHonorLogs(fetchedHonorLogs);
-    }, (error) => {
-      console.error('Failed to subscribe to honor logs', error);
-    });
-
     const allModsRef = collection(db, 'mods');
     const unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
       const fetchedMods: Mod[] = [];
@@ -139,7 +123,6 @@ export function ModDetail() {
       unsubscribeMod();
       unsubscribeEntries();
       unsubscribeDrafts();
-      unsubscribeHonorLogs();
       unsubscribeAllMods();
     };
   }, [id, user, isAdmin]);
@@ -180,6 +163,7 @@ export function ModDetail() {
       
       const combinedText = drafts.map(d => `- ${d.text}`).join('\n');
       const totalDraftPoints = drafts.reduce((sum, d) => sum + (d.points || 0), 0);
+      const draftCount = drafts.length;
       
       const now = Date.now();
       const entryId = crypto.randomUUID();
@@ -199,13 +183,13 @@ export function ModDetail() {
         deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
         updatedAt: now,
         totalPoints: (mod.totalPoints || 0) + totalDraftPoints,
-        honorScore: currentHonor + 1
+        honorScore: currentHonor + draftCount
       });
 
       const honorLogId = crypto.randomUUID();
       batch.set(doc(db, `mods/${id}/honor_logs/${honorLogId}`), {
-        amount: 1,
-        reason: 'Auto-increment on entry completion via drafts',
+        amount: draftCount,
+        reason: `Auto-increment for ${draftCount} submissions over 7 days`,
         createdAt: now,
         createdBy: user.uid,
         type: 'entry_auto'
@@ -218,19 +202,19 @@ export function ModDetail() {
       await batch.commit();
     } catch (error) {
       console.error('Failed to process drafts to entry', error);
-      alert('Failed to process drafts.');
+      // alert('Failed to process drafts.'); // Silent fail for auto-processing
     } finally {
       setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (isAdmin && mod && drafts.length > 0) {
+    if (user && mod && drafts.length > 0) {
       if (Date.now() >= mod.deadlineAt) {
         handleProcessDrafts();
       }
     }
-  }, [mod, drafts, isAdmin]);
+  }, [mod, drafts, user]);
 
   const handleExportPDF = () => {
     if (!mod) return;
@@ -241,8 +225,17 @@ export function ModDetail() {
       const accentColor: [number, number, number] = [30, 27, 75]; // Indigo 900
       const textColor: [number, number, number] = [24, 24, 27]; // Zinc 900
 
-      // Helper to strip non-ASCII/emojis for jsPDF compatibility
-      const safeText = (text: string) => text.replace(/[^\x00-\x7F]/g, "").trim() || "Unit";
+      // Helper to strip non-standard characters for jsPDF stability
+      const safeText = (text: string) => {
+        if (!text) return "N/A";
+        // Standard PDF fonts only support a limited character set without embedding.
+        // We normalize and strip anything outside the printable ASCII range for maximum reliability.
+        return text
+          .normalize("NFKD")
+          .replace(/[^\x20-\x7E\s]/g, "")
+          .replace(/\s+/g, " ")
+          .trim() || "Unit Detail";
+      };
 
       // Background accent for header
       doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
@@ -251,71 +244,85 @@ export function ModDetail() {
       // Title
       doc.setFontSize(22);
       doc.setTextColor(255, 255, 255);
-      doc.text('OFFICIAL MODERATOR AUDIT REPORT', 14, 25);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OFFICIAL PERFORMANCE DOSSIER', 14, 25);
       
-      doc.setFontSize(10);
-      doc.text(`SYSTEM REGISTRY LOG • REF: ${mod.id?.slice(0, 8).toUpperCase()}`, 14, 35);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`REGISTRY ID: ${mod.id?.toUpperCase()}`, 14, 38);
 
-      // Metadata
-      doc.setFontSize(10);
-      doc.text(`AUDIT DATE: ${new Date().toLocaleDateString()}`, pageWidth - 70, 25);
-      doc.text(`AUDIT TIME: ${new Date().toLocaleTimeString()}`, pageWidth - 70, 32);
+      // Metadata (Top Right)
+      doc.setFontSize(9);
+      doc.text(`AUDIT DATE: ${new Date().toLocaleDateString()}`, pageWidth - 70, 25, { align: 'left' });
+      doc.text(`SYSTEM REGISTRY: NOMINAL`, pageWidth - 70, 32, { align: 'left' });
 
       // Profile Section
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(18);
-      doc.text(safeText(mod.name), 14, 65);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(safeText(mod.name), 14, 70);
       
-      const displayRole = (mod.role || 'moderator').toUpperCase() === 'MOD' ? 'MODERATOR' : (mod.role || 'moderator').toUpperCase();
+      const rawRole = (mod.role || 'MODERATOR').toUpperCase();
+      const displayRole = rawRole === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR';
 
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`DESIGNATION: ${displayRole}`, 14, 72);
-      doc.text(`CONTACT: ${mod.phoneNumber || 'NOT REGISTERED'}`, 14, 77);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(115, 115, 115);
+      doc.text(`DESIGNATION: ${displayRole}`, 14, 80);
+      doc.text(`REGISTRATION: ${mod.phoneNumber || 'NOT REGISTERED'}`, 14, 86);
 
       // KPIs
       const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00';
       
       autoTable(doc, {
-        startY: 85,
-        head: [['AUDIT METRIC', 'SPECIFICATION']],
+        startY: 96,
+        head: [['ANALYTIC METRIC', 'VALUE / STATISTIC']],
         body: [
           ['ACCUMULATED PERFORMANCE POINTS', `${mod.totalPoints || 0} PTS`],
-          ['TOTAL PROCESSED ENTRIES', entries.length],
+          ['TOTAL DATA LOGS PROCESSED', entries.length],
           ['EFFICIENCY COEFFICIENT (P/E)', peRatio],
-          ['HONOR STANDING', `${mod.honorScore ?? 100}/100`],
-          ['ACCOUNT STATUS', (mod.status || 'ACTIVE').toUpperCase()]
+          ['HONOR STANDING', `${mod.honorScore ?? 100} / 100`],
+          ['DEPLOYMENT STATUS', (mod.status || 'ACTIVE').toUpperCase()]
         ],
         theme: 'grid',
-        headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 10, cellPadding: 5 },
+        headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
+        styles: { fontSize: 9, cellPadding: 5, font: 'helvetica' },
         columnStyles: {
-          1: { halign: 'right', fontStyle: 'bold' }
+          1: { halign: 'right', fontStyle: 'bold', textColor: accentColor }
         }
       });
 
       // Activity Ledger
-      const lastY = (doc as any).lastAutoTable.finalY + 20;
+      const lastY = (doc as any).lastAutoTable.finalY + 18;
       doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
       doc.text('VERIFIED PERFORMANCE LEDGER', 14, lastY);
 
-      const entryRows = entries.map(e => [
+      const entryRows = entries.map((e, idx) => [
+        `LOG #${entries.length - idx}`,
         new Date(e.createdAt).toLocaleString(),
-        `+${e.points || 0}`,
+        `+${e.points || 0} PTS`,
         safeText(e.text)
       ]);
 
       autoTable(doc, {
-        startY: lastY + 5,
-        head: [['TIMESTAMP', 'PTS', 'ENTRY DETAIL']],
+        startY: lastY + 6,
+        head: [['ID', 'TIMESTAMP', 'PTS', 'ENTRY DETAIL / DESCRIPTION']],
         body: entryRows,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] },
-        styles: { fontSize: 9 },
+        headStyles: { fillColor: [63, 63, 70], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
         columnStyles: {
-          0: { cellWidth: 45 },
-          1: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }
+          0: { cellWidth: 18 },
+          1: { cellWidth: 38 },
+          2: { cellWidth: 22, fontStyle: 'bold', halign: 'center' },
+          3: { cellWidth: 'auto' }
+        },
+        didDrawPage: (data) => {
+          doc.setFontSize(7);
+          doc.setTextColor(160, 160, 160);
+          doc.text(`Official Audit Log • Page ${data.pageNumber}`, 14, doc.internal.pageSize.height - 10);
         }
       });
 
@@ -336,105 +343,14 @@ export function ModDetail() {
     }
   };
 
-  const handleAddEntry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !user || !entryText.trim() || !mod) return;
-
-    setIsSubmitting(true);
-    try {
-      const now = Date.now();
-      const entryId = crypto.randomUUID();
-      
-      const batch = writeBatch(db);
-      
-      const newEntryRef = doc(db, `mods/${id}/entries/${entryId}`);
-      batch.set(newEntryRef, {
-        text: entryText.trim(),
-        createdAt: now,
-        createdBy: user.uid,
-        points: selectedPoints
-      });
-      
-      const modRef = doc(db, 'mods', id);
-      const currentHonor = mod.honorScore ?? 100;
-      batch.update(modRef, {
-        lastEntryAt: now,
-        deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
-        updatedAt: now,
-        totalPoints: (mod.totalPoints || 0) + selectedPoints,
-        honorScore: currentHonor + 1
-      });
-
-      const honorLogId = crypto.randomUUID();
-      batch.set(doc(db, `mods/${id}/honor_logs/${honorLogId}`), {
-        amount: 1,
-        reason: 'Auto-increment on new entry',
-        createdAt: now,
-        createdBy: user.uid,
-        type: 'entry_auto'
-      });
-
-      await batch.commit();
-
-      setEntryText('');
-      setSelectedPoints(1);
-      setShowEntryModal(false);
-    } catch (error) {
-      console.error('Failed to add entry', error);
-      alert('Failed to add entry. Only Admins can modify.');
-      handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddHonor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !user || !mod || !honorChangeReason.trim() || honorChangeAmount === 0 || Math.abs(honorChangeAmount) > 5) return;
-
-    setIsSubmittingHonor(true);
-    try {
-      const now = Date.now();
-      const batch = writeBatch(db);
-      
-      const modRef = doc(db, 'mods', id);
-      const currentHonor = mod.honorScore ?? 100;
-      batch.update(modRef, {
-        honorScore: currentHonor + honorChangeAmount,
-        updatedAt: now
-      });
-
-      const logId = crypto.randomUUID();
-      batch.set(doc(db, `mods/${id}/honor_logs/${logId}`), {
-        amount: honorChangeAmount,
-        reason: honorChangeReason.trim(),
-        createdAt: now,
-        createdBy: user.uid,
-        type: 'manual'
-      });
-
-      await batch.commit();
-
-      setHonorChangeReason('');
-      setHonorChangeAmount(1);
-      setShowHonorModal(false);
-    } catch (error) {
-      console.error('Failed to change honor', error);
-      alert('Failed to update honor score.');
-      handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
-    } finally {
-      setIsSubmittingHonor(false);
-    }
-  };
-
   const handleDeleteDraft = async (draftId: string) => {
-    if (!id || !isAdmin) return;
+    if (!id || !user) return;
     try {
-      const batch = writeBatch(db);
       const draftRef = doc(db, `mods/${id}/drafts/${draftId}`);
+      await updateDoc(doc(db, 'mods', id), { updatedAt: Date.now() });
+      const batch = writeBatch(db);
       batch.delete(draftRef);
       await batch.commit();
-      await updateDoc(doc(db, 'mods', id), { updatedAt: Date.now() });
     } catch (error) {
       console.error('Failed to delete draft', error);
     }
@@ -442,7 +358,7 @@ export function ModDetail() {
 
   const handleUpdateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !isAdmin || !draftToEdit || !editDraftText.trim()) return;
+    if (!id || !user || !draftToEdit || !editDraftText.trim()) return;
     setIsEditingDraft(true);
     try {
       const draftRef = doc(db, `mods/${id}/drafts/${draftToEdit.id}`);
@@ -457,98 +373,6 @@ export function ModDetail() {
       alert('Failed to update draft.');
     } finally {
       setIsEditingDraft(false);
-    }
-  };
-
-  const handleUpdateHonorLog = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !isAdmin || !logToEdit || !editLogReason.trim()) return;
-    setIsProcessingLog(true);
-    try {
-      const batch = writeBatch(db);
-      const logRef = doc(db, `mods/${id}/honor_logs/${logToEdit.id}`);
-      const modRef = doc(db, 'mods', id);
-
-      const amountDiff = editLogAmount - logToEdit.amount;
-      
-      batch.update(logRef, {
-        amount: editLogAmount,
-        reason: editLogReason.trim(),
-        updatedAt: Date.now()
-      });
-
-      if (amountDiff !== 0) {
-        batch.update(modRef, {
-          honorScore: increment(amountDiff),
-          updatedAt: Date.now()
-        });
-      }
-
-      await batch.commit();
-      setLogToEdit(null);
-    } catch (error) {
-      console.error('Failed to update honor log', error);
-      handleFirestoreError(error, OperationType.WRITE, `mods/${id}/honor_logs`);
-    } finally {
-      setIsProcessingLog(false);
-    }
-  };
-
-  const handleDeleteHonorLog = async () => {
-    if (!id || !isAdmin || !logToDelete) return;
-    setIsProcessingLog(true);
-    try {
-      const batch = writeBatch(db);
-      const logRef = doc(db, `mods/${id}/honor_logs/${logToDelete.id}`);
-      const modRef = doc(db, 'mods', id);
-
-      batch.delete(logRef);
-      // Correcting points: subtract the original amount
-      batch.update(modRef, {
-        honorScore: increment(-logToDelete.amount),
-        updatedAt: Date.now()
-      });
-
-      await batch.commit();
-      setLogToDelete(null);
-    } catch (error) {
-      console.error('Failed to delete honor log', error);
-      handleFirestoreError(error, OperationType.WRITE, `mods/${id}/honor_logs`);
-    } finally {
-      setIsProcessingLog(false);
-    }
-  };
-
-  const handleRevertHonorLog = async (log: HonorLog) => {
-    if (!id || !isAdmin || !user) return;
-    try {
-      const batch = writeBatch(db);
-      const logRef = doc(db, `mods/${id}/honor_logs/${log.id}`);
-      const draftRef = doc(collection(db, `mods/${id}/drafts`));
-      const modRef = doc(db, 'mods', id);
-
-      const now = Date.now();
-
-      // Delete log
-      batch.delete(logRef);
-      // Subtract points from honor score
-      batch.update(modRef, {
-        honorScore: increment(-log.amount),
-        updatedAt: now
-      });
-      // Add as draft
-      batch.set(draftRef, {
-        text: `[REVERTED HONOR LOG] ${log.reason}`,
-        points: 0,
-        createdAt: now,
-        updatedAt: now,
-        createdBy: user.uid
-      });
-
-      await batch.commit();
-    } catch (error) {
-      console.error('Failed to revert honor log', error);
-      handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
     }
   };
 
@@ -936,38 +760,22 @@ export function ModDetail() {
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
                 >
-                  {isAdmin && (
-                    <div className="flex flex-col gap-3">
-                      <button 
-                        onClick={() => { setShowEntryModal(true); setShowHeaderMenu(false); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-bold flex items-center gap-4 transition-colors shadow-lg shadow-black/20 w-full"
-                      >
-                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
-                        <span>Create New Detail</span>
-                      </button>
-                      <button 
-                        onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
-                        className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
-                      >
-                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
-                        <span>Add Draft Mode</span>
-                      </button>
-                      <button 
-                        onClick={() => { setShowHonorModal(true); setShowHeaderMenu(false); }}
-                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
-                      >
-                        <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
-                        <span>Adjust Honor</span>
-                      </button>
-                      <button 
-                        onClick={() => { handleExportPDF(); setShowHeaderMenu(false); }}
-                        className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
-                      >
-                        <Download className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
-                        <span>PDF Report</span>
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
+                      className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                    >
+                      <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
+                      <span>Add Performance Draft</span>
+                    </button>
+                    <button 
+                      onClick={() => { handleExportPDF(); setShowHeaderMenu(false); }}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                    >
+                      <Download className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
+                      <span>PDF Report</span>
+                    </button>
+                  </div>
                 </motion.div>
               </>
             )}
@@ -1196,14 +1004,14 @@ export function ModDetail() {
         
         <div className="bg-zinc-900 rounded-xl shadow-lg shadow-black/20 border border-white/5 overflow-hidden shrink-0 flex flex-col">
           <div className="px-6 py-5 border-b border-white/5 bg-zinc-800/50 flex justify-between items-center">
-             <h4 className="text-lg font-bold text-white">Entries Log</h4>
+             <h4 className="text-lg font-bold text-white">Performance Logs</h4>
           </div>
           
           <div className="p-6">
             {entries.length === 0 ? (
               <div className="text-center py-12 bg-zinc-800/50 rounded-lg border border-dashed border-white/10">
-                 <p className="text-sm text-zinc-400 font-medium">No entries recorded for this {mod.role || 'moderator'}.</p>
-                 <p className="text-xs text-zinc-500 mt-1">When entries are added, they will appear here.</p>
+                 <p className="text-sm text-zinc-400 font-medium">No performance records for this {mod.role || 'moderator'}.</p>
+                 <p className="text-xs text-zinc-500 mt-1">When drafts are submitted, they will appear here as entries.</p>
               </div>
             ) : (
               <div className="pl-8 pr-2 py-2">
@@ -1258,9 +1066,9 @@ export function ModDetail() {
         {drafts.length > 0 && (
           <div className="bg-[#1e1b4b] rounded-xl shadow-lg shadow-black/20 border border-indigo-500/20 overflow-hidden shrink-0 flex flex-col relative">
             <div className="px-6 py-5 border-b border-indigo-500/20 bg-indigo-900/30 flex justify-between items-center">
-               <h4 className="text-lg font-bold text-indigo-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></div> Local Drafts System</h4>
+               <h4 className="text-lg font-bold text-indigo-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></div> Local Draft Manager</h4>
                {isAdmin && (
-                 <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50">Publish All Drafts Now</button>
+                 <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50 font-black">Submit & Reset Timer Now</button>
                )}
             </div>
             
@@ -1278,95 +1086,32 @@ export function ModDetail() {
                                 +{draft.points} pts
                               </span>
                             )}
-                            {isAdmin && (
-                              <div className="flex items-center gap-2">
-                                <button 
-                                  onClick={() => {
-                                    setDraftToEdit(draft);
-                                    setEditDraftText(draft.text || '');
-                                    setEditDraftPoints(draft.points || 1);
-                                  }}
-                                  className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white px-3 py-1 rounded-lg border border-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                  <span>Edit</span>
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteDraft(draft.id!)}
-                                  className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-3 py-1 rounded-lg border border-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  <span>Revert</span>
-                                </button>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  setDraftToEdit(draft);
+                                  setEditDraftText(draft.text || '');
+                                  setEditDraftPoints(draft.points || 1);
+                                }}
+                                className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white px-3 py-1 rounded-lg border border-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteDraft(draft.id!)}
+                                className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-3 py-1 rounded-lg border border-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-indigo-400 font-mono text-xs bg-indigo-950 inline-block px-2 py-1 rounded border border-indigo-500/20">
                             Drafted {new Date(draft.createdAt).toLocaleString()}
                           </span>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {honorLogs.length > 0 && (
-          <div className="bg-[#022c22] rounded-xl shadow-lg shadow-black/20 border border-emerald-500/20 overflow-hidden shrink-0 flex flex-col relative mt-4">
-            <div className="px-6 py-5 border-b border-emerald-500/20 bg-emerald-900/30 flex items-center">
-               <h4 className="text-lg font-bold text-emerald-300 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-emerald-400" /> Honor Analytics</h4>
-            </div>
-            
-            <div className="p-6">
-              <div className="pl-4 pr-2 py-2">
-                <ol className="relative border-l border-emerald-500/30 space-y-6 text-emerald-200">
-                  {honorLogs.map((log) => (
-                    <li key={log.id} className="ml-6 pl-2 relative">
-                      <span className={`absolute -left-[35px] top-1 flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/30 bg-[#064e3b] shadow-inner font-bold text-[10px] ${log.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {log.amount > 0 ? '+' : ''}{log.amount}
-                      </span>
-                      <div className="flex flex-col gap-1 flex-1">
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-emerald-100 font-medium whitespace-pre-wrap">{log.reason}</span>
-                          {isAdmin && (
-                            <div className="flex items-center gap-2 shrink-0">
-                               <button 
-                                onClick={() => {
-                                  setLogToEdit(log);
-                                  setEditLogAmount(log.amount);
-                                  setEditLogReason(log.reason);
-                                }}
-                                className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-lg transition-all active:scale-90" title="Edit"
-                              >
-                                <Pencil className="w-4.5 h-4.5" />
-                              </button>
-                              <button 
-                                onClick={() => handleRevertHonorLog(log)}
-                                className="p-2.5 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black rounded-lg transition-all active:scale-90" title="Revert to Draft"
-                              >
-                                <RotateCcw className="w-4.5 h-4.5" />
-                              </button>
-                              <button 
-                                onClick={() => setLogToDelete(log)}
-                                className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all active:scale-90" title="Delete Log"
-                              >
-                                <Trash2 className="w-4.5 h-4.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-emerald-400 font-mono text-xs bg-emerald-950 inline-block px-2 py-1 rounded border border-emerald-500/20">
-                            {new Date(log.createdAt).toLocaleString()}
-                          </span>
-                          {log.type === 'entry_auto' && (
-                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Auto Credit</span>
-                          )}
                         </div>
                       </div>
                     </li>
@@ -1384,7 +1129,7 @@ export function ModDetail() {
         </div>
       </div>
 
-      {showDraftModal && isAdmin && (
+      {showDraftModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowDraftModal(false)}></div>
@@ -1453,7 +1198,7 @@ export function ModDetail() {
         </div>
       )}
 
-      {draftToEdit && isAdmin && (
+      {draftToEdit && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setDraftToEdit(null)}></div>
@@ -1511,75 +1256,6 @@ export function ModDetail() {
                     type="button"
                     className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
                     onClick={() => setDraftToEdit(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEntryModal && isAdmin && (
-        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
-          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowEntryModal(false)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-white/5 z-10 mx-auto transform-gpu">
-              <form onSubmit={handleAddEntry}>
-                <div className="bg-zinc-900 px-6 pb-6 pt-6">
-                  <h3 className="text-xl font-bold leading-6 text-white mb-2">New Entry for {mod.name}</h3>
-                  <p className="text-sm text-emerald-400 mb-6 bg-emerald-500/10 px-3 py-2 rounded-md border border-emerald-500/20 inline-block font-medium">Adding this will reset the demotion timer to 7 days.</p>
-                  <div className="mt-2">
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">Entry Details</label>
-                    <textarea
-                      rows={4}
-                      className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border resize-none"
-                      placeholder="e.g. Activity recorded at link..."
-                      value={entryText}
-                      onChange={(e) => setEntryText(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-zinc-300 mb-4">Choose Points for this Entry</label>
-                    <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-                      {[1, 2, 3, 5, 10, 15, 20, 25].map((pts) => (
-                        <button
-                          key={pts}
-                          type="button"
-                          onClick={() => setSelectedPoints(pts)}
-                          className={`px-4 py-3 rounded-xl border text-lg font-bold transition-all ${selectedPoints === pts ? 'bg-amber-500 border-amber-400 text-amber-950 scale-105 shadow-lg shadow-amber-500/20' : 'bg-black border-white/10 text-zinc-400 hover:border-white/30 hover:text-white'}`}
-                        >
-                          {pts}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                      <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em]">Custom Points</span>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={selectedPoints.toString()}
-                        onChange={(e) => setSelectedPoints(e.target.value ? parseInt(e.target.value) : 0)}
-                        className="w-full sm:w-32 bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all hover:border-white/20"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !entryText.trim()}
-                    className="inline-flex w-full justify-center rounded-lg border border-transparent bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save & Reset Timer'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowEntryModal(false)}
-                    className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-300 shadow-lg shadow-black/20 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
                   >
                     Cancel
                   </button>
@@ -1755,153 +1431,7 @@ export function ModDetail() {
           </div>
         </div>
       )}
-      
-      {showHonorModal && isAdmin && (
-        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
-          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowHonorModal(false)}></div>
-            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-emerald-500/20 z-10 mx-auto transform-gpu">
-              <form onSubmit={handleAddHonor}>
-                <div className="bg-zinc-900 px-6 pb-6 pt-6">
-                  <h3 className="text-xl font-bold leading-6 text-emerald-300 mb-2">Adjust Honor Score</h3>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">Change Amount (-5 to +5)</label>
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="range" 
-                        min="-5" 
-                        max="5" 
-                        value={honorChangeAmount}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val !== 0) setHonorChangeAmount(val);
-                        }}
-                        className="flex-1 accent-emerald-500"
-                      />
-                      <span className={`w-12 text-center font-black text-xl ${honorChangeAmount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {honorChangeAmount > 0 ? '+' : ''}{honorChangeAmount}
-                      </span>
-                    </div>
-                    {honorChangeAmount === 0 && <p className="text-red-400 text-xs mt-1">Amount cannot be 0.</p>}
-                  </div>
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">Reason for Adjustment</label>
-                    <textarea
-                      rows={3}
-                      className="block w-full rounded-lg border-emerald-500/10 bg-black text-white shadow-lg shadow-black/20 focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-3 border resize-none"
-                      placeholder="e.g. Exceptional community assistance..."
-                      value={honorChangeReason}
-                      onChange={(e) => setHonorChangeReason(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingHonor || !honorChangeReason.trim() || honorChangeAmount === 0}
-                    className="inline-flex w-full justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-500 sm:w-auto disabled:opacity-50 transition-colors"
-                  >
-                    {isSubmittingHonor ? 'Applying...' : 'Apply Adjustment'}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
-                    onClick={() => setShowHonorModal(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Honor Log Confirm Delete Modal */}
-      {logToDelete && (
-        <div className="fixed inset-0 z-[60] overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center px-4">
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLogToDelete(null)}></div>
-            <div className="relative bg-zinc-900 border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
-              <h3 className="text-xl font-bold text-white mb-2">Delete Honor Log?</h3>
-              <p className="text-zinc-400 text-sm mb-6">This will automatically subtract <span className="text-red-400 font-bold">{logToDelete.amount} pts</span> from moderator's honor score.</p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={handleDeleteHonorLog}
-                  disabled={isProcessingLog}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl disabled:opacity-50"
-                >
-                  Confirm Delete
-                </button>
-                <button 
-                  onClick={() => setLogToDelete(null)}
-                  className="flex-1 bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Honor Log Edit Modal */}
-      {logToEdit && (
-        <div className="fixed inset-0 z-[60] overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center px-4">
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLogToEdit(null)}></div>
-            <div className="relative bg-zinc-900 border border-white/10 p-8 rounded-[2rem] w-full max-w-md shadow-2xl">
-              <form onSubmit={handleUpdateHonorLog}>
-                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter text-emerald-300">Edit Honor Entry</h3>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Adjustment Amount</label>
-                    <div className="flex gap-2">
-                       <input 
-                        type="number"
-                        value={editLogAmount}
-                        onChange={(e) => setEditLogAmount(parseInt(e.target.value) || 0)}
-                        className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-emerald-500 outline-none"
-                       />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Reason / Detail</label>
-                    <textarea 
-                      value={editLogReason}
-                      onChange={(e) => setEditLogReason(e.target.value)}
-                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:border-emerald-500 outline-none h-24 resize-none"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-8 flex flex-col gap-3">
-                  <button 
-                    type="submit"
-                    disabled={isProcessingLog}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                  >
-                    Save Changes
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setLogToEdit(null)}
-                    className="w-full bg-zinc-800 text-zinc-400 font-bold py-4 rounded-2xl"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Moderator Modal */}
+         {/* Assign Moderator Modal */}
       {showAssignModal && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">

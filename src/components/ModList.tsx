@@ -6,10 +6,8 @@ import { CountdownTimer } from './CountdownTimer';
 import { TermsModal } from './TermsModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
+import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 // No extra declarations needed for functional autoTable
 
