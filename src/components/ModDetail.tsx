@@ -876,18 +876,18 @@ export function ModDetail() {
                     )}
                  </div>
                  {isAdmin && (
-                     <div className="flex gap-2">
+                     <div className="flex flex-wrap gap-3">
                       {mod.status === 'blacklisted' ? (
                         <button 
                           onClick={() => handleStatusChange('active')}
-                          className="px-6 py-3 bg-emerald-600 text-white hover:bg-emerald-500 rounded-2xl transition-all border border-emerald-500/50 flex items-center gap-2 text-sm font-black shadow-xl shadow-emerald-900/30 active:scale-95"
+                          className="px-6 py-4 bg-emerald-600 text-white hover:bg-emerald-500 rounded-2xl transition-all border border-emerald-500/50 flex items-center gap-2 text-sm font-black shadow-xl shadow-emerald-900/40 active:scale-95"
                         >
                           Re-Hire Member
                         </button>
                       ) : (
                         <button 
                           onClick={() => handleStatusChange('blacklisted')}
-                          className="px-6 py-3 bg-red-600 text-white hover:bg-red-500 rounded-2xl transition-all border border-red-500/50 flex items-center gap-2 text-sm font-black shadow-xl shadow-red-900/30 active:scale-95"
+                          className="px-6 py-4 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-2xl transition-all border border-red-600/20 flex items-center gap-2 text-sm font-black active:scale-95"
                         >
                           Blacklist
                         </button>
@@ -896,14 +896,14 @@ export function ModDetail() {
                       {mod.role === 'officer' ? (
                         <button 
                           onClick={() => handleRoleChange('demote')}
-                          className="px-6 py-3 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 rounded-2xl transition-all border border-amber-600/30 flex items-center gap-2 text-sm font-black"
+                          className="px-6 py-4 bg-amber-600/10 text-amber-500 hover:bg-amber-600 hover:text-white rounded-2xl transition-all border border-amber-600/20 flex items-center gap-2 text-sm font-black"
                         >
                           Demote to Mod
                         </button>
                       ) : (
                         <button 
                           onClick={() => handleRoleChange('promote')}
-                          className="px-6 py-3 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-2xl transition-all border border-blue-600/30 flex items-center gap-2 text-sm font-black"
+                          className="px-6 py-4 bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-2xl transition-all border border-blue-600/20 flex items-center gap-2 text-sm font-black"
                         >
                           Promote to Officer
                         </button>
@@ -916,72 +916,85 @@ export function ModDetail() {
                           setEditProfilePhone(mod.phoneNumber || ''); 
                           setEditProfileError(''); 
                         }} 
-                        className="px-5 py-3 bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-2xl transition-all border border-white/10 flex items-center gap-3 text-sm font-bold"
+                        className="p-4 bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-2xl transition-all border border-white/10 flex items-center gap-3 text-sm font-bold shadow-lg"
                         title="Edit Profile"
                       >
-                        <Pencil className="w-5 h-5" />
-                        <span className="hidden lg:inline">Edit Profile</span>
+                        <Pencil className="w-6 h-6" />
                       </button>
                     </div>
                  )}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                   {mod.phoneNumber ? (
-                    <a 
-                      href={`https://wa.me/${mod.phoneNumber.replace(/\D/g, '')}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="px-5 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 font-mono text-base border border-emerald-500/20 shadow-inner flex items-center gap-3 hover:bg-emerald-500/20 transition-all font-black tracking-wider"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                      {mod.phoneNumber}
-                    </a>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <div className="px-6 py-4 rounded-2xl bg-zinc-800/50 text-zinc-400 font-mono text-lg border border-white/5 shadow-inner flex items-center gap-4 flex-1 sm:flex-none font-black tracking-widest uppercase">
+                        <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        {mod.phoneNumber}
+                      </div>
+                      <a 
+                        href={`https://wa.me/${mod.phoneNumber.replace(/\D/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-base px-8 py-4 rounded-2xl transition-all font-black border border-emerald-500/50 shadow-xl shadow-emerald-900/30 active:scale-95 flex items-center justify-center gap-3 whitespace-nowrap"
+                      >
+                        Message Now
+                      </a>
+                    </div>
                   ) : (
-                    <span className="px-5 py-2.5 rounded-xl bg-zinc-800 text-zinc-500 font-mono text-base border border-white/10 shadow-inner flex items-center gap-3">
-                      No Contact Linked
+                    <span className="px-6 py-4 rounded-2xl bg-zinc-800 text-zinc-500 font-mono text-lg border border-white/10 shadow-inner flex items-center gap-4">
+                      Contact Data Unavailable
                     </span>
-                  )}
-                  {mod.phoneNumber && (
-                    <a 
-                      href={`https://wa.me/${mod.phoneNumber.replace(/\D/g, '')}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-3 rounded-2xl transition-all font-black border border-emerald-500/50 shadow-xl shadow-emerald-900/20 active:scale-95 flex items-center gap-2"
-                    >
-                      Instant Connect
-                    </a>
                   )}
               </div>
             </div>
 
-            <p className="text-sm text-zinc-500 mb-8 font-black uppercase tracking-[0.4em] border-b border-blue-500/20 pb-4 inline-block w-full">
-              Member Analytics & Intel
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-black/40 p-6 rounded-3xl border border-white/5 shadow-inner">
-                <span className={`w-3 h-3 rounded-full shrink-0 ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}></span>
-                <span className="text-zinc-500 text-xs sm:text-sm font-black uppercase tracking-[0.2em] shrink-0">Active Status</span>
-                <span className="font-black text-white ml-auto text-lg sm:text-xl">{new Date(mod.lastEntryAt).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-black/40 p-6 rounded-3xl border border-white/5 shadow-inner">
-                <span className="w-3 h-3 rounded-full shrink-0 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"></span>
-                <span className="text-zinc-500 text-xs sm:text-sm font-black uppercase tracking-[0.2em] shrink-0">Data Logs</span>
-                <span className="font-black text-white ml-auto text-2xl sm:text-3xl">{entries.length}</span>
-              </div>
-              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-amber-500/5 p-8 rounded-[2rem] border border-amber-500/10 shadow-2xl lg:mt-4 col-span-full">
-                <span className="w-4 h-4 rounded-full shrink-0 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.6)]"></span>
-                <span className="text-amber-500/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">Accumulated Merit</span>
-                <span className="font-black text-amber-400 text-5xl sm:text-7xl ml-auto tracking-tighter">{mod.totalPoints || 0}</span>
-              </div>
-              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-purple-500/5 p-6 rounded-3xl border border-purple-500/10 shadow-inner col-span-full">
-                <span className="w-3 h-3 rounded-full shrink-0 bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]"></span>
-                <span className="text-purple-400/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">P/E Ratio <span className="lowercase text-zinc-500 font-normal tracking-normal">(Points to Entry)</span></span>
-                <span className="font-black text-purple-400 text-3xl sm:text-4xl ml-auto tracking-tighter">{entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00'}</span>
-              </div>
-              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-emerald-500/5 p-6 rounded-3xl border border-emerald-500/10 shadow-inner col-span-full">
-                <span className="w-3 h-3 rounded-full shrink-0 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></span>
-                <span className="text-emerald-400/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">Honor Score</span>
-                <span className="font-black text-emerald-400 text-3xl sm:text-4xl ml-auto tracking-tighter">{mod.honorScore ?? 100}</span>
+            <div className="space-y-6">
+              <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.4em] flex items-center gap-4">
+                 Intelligence Overview
+                 <span className="flex-1 h-px bg-white/5"></span>
+              </p>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Status</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`w-3 h-3 rounded-full ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}></span>
+                    <span className="font-black text-white text-lg sm:text-xl truncate">
+                      {mod.status === 'blacklisted' ? 'Offline' : 'Online'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Data Logs</span>
+                  <span className="font-black text-white text-3xl sm:text-4xl group-hover:text-blue-400 transition-colors">{entries.length}</span>
+                </div>
+
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">P/E Ratio</span>
+                  <span className="font-black text-white text-3xl sm:text-4xl group-hover:text-purple-400 transition-colors">
+                    {entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0'}
+                  </span>
+                </div>
+
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Honor Score</span>
+                  <div className="flex items-end justify-between">
+                    <span className="font-black text-emerald-400 text-3xl sm:text-4xl">{mod.honorScore ?? 100}</span>
+                    <span className="text-zinc-700 text-[10px] font-black mb-1">/ 100</span>
+                  </div>
+                </div>
+
+                <div className="bg-amber-500/5 p-8 rounded-[2.5rem] border border-amber-500/10 shadow-2xl col-span-full flex items-center justify-between group hover:bg-amber-500/10 transition-all">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-amber-500/70 text-[10px] font-black uppercase tracking-[0.3em]">Accumulated Merit</span>
+                    <span className="text-zinc-500 text-xs font-medium">Total performance points earned across sessions</span>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <Trophy className="w-12 h-12 text-amber-500/20 group-hover:text-amber-500/40 transition-all" />
+                    <span className="font-black text-amber-400 text-6xl sm:text-8xl tracking-tighter">{mod.totalPoints || 0}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

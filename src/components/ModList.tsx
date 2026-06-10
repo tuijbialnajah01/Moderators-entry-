@@ -520,80 +520,70 @@ export function ModList() {
                       {isTopRank && <Trophy className="w-7 h-7 text-amber-400 ml-1 drop-shadow-md" />}
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-4 mt-8">
-                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[140px]">
-                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Entries</span>
-                        <strong className="text-xl sm:text-3xl text-white font-black">{mod.entryCount}</strong>
-                      </p>
-                      {draftsMap[mod.id] > 0 && (
-                        <p className="bg-indigo-500/10 px-6 py-4 rounded-2xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 min-w-[140px] animate-pulse">
-                          <span className="text-indigo-400 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Drafts</span>
-                          <strong className="text-xl sm:text-3xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
-                        </p>
-                      )}
-                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
-                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Points</span>
-                        <strong className="text-xl sm:text-3xl text-amber-400 flex items-center gap-3 font-black">
-                          <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-amber-500" />
-                          {mod.totalPoints || 0}
-                        </strong>
-                      </p>
-                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
-                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">P/E</span>
-                        <strong className="text-xl sm:text-3xl text-purple-400 font-black">
-                          {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
-                        </strong>
-                      </p>
-                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
-                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Honor</span>
-                        <strong className="text-xl sm:text-3xl text-emerald-400 font-black">
-                          {mod.honorScore ?? 100}
-                        </strong>
-                      </p>
-                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[160px]">
-                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Last Active</span>
-                        <strong className="text-xl sm:text-2xl text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
-                      </p>
-                      
-                      <div className="flex gap-3 ml-auto self-end">
-                        {mod.status !== 'blacklisted' && (
-                          <>
-                            {mod.role === 'officer' ? (
-                              <span className="bg-blue-500/10 text-blue-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-blue-500/20 shadow-lg">Officer</span>
-                            ) : isCritical ? (
-                              <span className="bg-red-500/10 text-red-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-red-500/20 shadow-lg animate-pulse">Critical</span>
-                            ) : isWarning ? (
-                              <span className="bg-amber-500/10 text-amber-400 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl tracking-wider border border-amber-500/20 shadow-lg">Warning</span>
-                            ) : null}
-                          </>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-8">
+                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1">
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Entries</span>
+                          <strong className="text-2xl text-white font-black">{mod.entryCount}</strong>
+                        </div>
+                        {draftsMap[mod.id] > 0 && (
+                          <div className="bg-indigo-500/10 px-5 py-4 rounded-3xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 animate-pulse">
+                            <span className="text-indigo-400 text-[10px] uppercase tracking-[0.2em] font-black">Drafts</span>
+                            <strong className="text-2xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
+                          </div>
                         )}
-                        {mod.status === 'blacklisted' && (
-                          <span className="bg-red-600/20 text-red-500 text-xs sm:text-sm font-black uppercase px-5 py-2.5 rounded-xl border border-red-600/30 flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4" /> Blacklisted
-                          </span>
-                        )}
+                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Points</span>
+                          <strong className="text-2xl text-amber-400 flex items-center gap-2 font-black">
+                            <Trophy className="w-5 h-5 text-amber-500" />
+                            {mod.totalPoints || 0}
+                          </strong>
+                        </div>
+                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">P/E Ratio</span>
+                          <strong className="text-2xl text-purple-400 font-black">
+                            {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
+                          </strong>
+                        </div>
+                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Honor</span>
+                          <strong className="text-2xl text-emerald-400 font-black">
+                            {mod.honorScore ?? 100}
+                          </strong>
+                        </div>
+                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1 col-span-full sm:col-span-1">
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Active Since</span>
+                          <strong className="text-lg text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
+                        </div>
                       </div>
                     </div>
-                  </div>
                   {isAdmin && (
-                    <div className="mt-4 flex gap-2">
-                       {mod.status === 'blacklisted' ? (
-                          <button 
-                            onClick={() => handleStatusChange(mod.id, 'active')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
-                          >
-                            Re-Hire
-                          </button>
-                       ) : (
-                          <button 
-                            onClick={() => handleStatusChange(mod.id, 'blacklisted')}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-red-900/20"
-                          >
-                            Move to Blacklist
-                          </button>
-                       )}
+                    <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex gap-2">
+                         {mod.status === 'blacklisted' ? (
+                            <button 
+                              onClick={() => handleStatusChange(mod.id, 'active')}
+                              className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-emerald-600/30 active:scale-95 shadow-lg"
+                            >
+                              Re-Hire Member
+                            </button>
+                         ) : (
+                            <button 
+                              onClick={() => handleStatusChange(mod.id, 'blacklisted')}
+                              className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-red-600/20 active:scale-95"
+                            >
+                              Move to Blacklist
+                            </button>
+                         )}
+                      </div>
+                      <Link 
+                        to={`/mod/${mod.id}`}
+                        className="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest px-6 py-2.5 bg-blue-400/5 rounded-xl border border-blue-400/10 hover:bg-blue-400/10 transition-all"
+                      >
+                        Control Panel &rarr;
+                      </Link>
                     </div>
                   )}
+
                 </div>
                 
                 <div className={`w-full md:w-[32rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
