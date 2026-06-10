@@ -849,6 +849,16 @@ export function ModDetail() {
                         </button>
                       ))}
                     </div>
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em]">Custom Points</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={selectedPoints.toString()}
+                        onChange={(e) => setSelectedPoints(e.target.value ? parseInt(e.target.value) : 0)}
+                        className="w-full sm:w-32 bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all hover:border-white/20"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
@@ -907,6 +917,16 @@ export function ModDetail() {
                           {pts}
                         </button>
                       ))}
+                    </div>
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em]">Custom Points</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={editEntryPoints.toString()}
+                        onChange={(e) => setEditEntryPoints(e.target.value ? parseInt(e.target.value) : 0)}
+                        className="w-full sm:w-32 bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all hover:border-white/20"
+                      />
                     </div>
                   </div>
                 </div>
