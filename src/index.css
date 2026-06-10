@@ -64,3 +64,9 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #475569; /* slate-600 */
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

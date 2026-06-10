@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, writeBatch, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, Entry, HonorLog, handleFirestoreError, OperationType } from '../types';
+import { ModDetailSkeleton } from './Skeletons';
 import { CountdownTimer } from './CountdownTimer';
 import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -694,7 +695,7 @@ export function ModDetail() {
   };
 
   if ((loading || authLoading) && !mod) {
-    return <div className="flex-1 min-h-screen bg-black flex items-center justify-center p-8"><div className="w-full max-w-5xl h-64 bg-zinc-800/50 rounded-xl animate-pulse"></div></div>;
+    return <ModDetailSkeleton />;
   }
 
   if (!mod || (mod.status === 'blacklisted' && !isAdmin)) {

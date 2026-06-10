@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, handleFirestoreError, OperationType } from '../types';
+import { ModCardSkeleton } from './Skeletons';
 import { CountdownTimer } from './CountdownTimer';
 import { TermsModal } from './TermsModal';
 import { Link } from 'react-router-dom';
@@ -532,7 +533,11 @@ export function ModList() {
 
         <div className="grid grid-cols-1 gap-8 w-full max-w-6xl mx-auto pb-16">
           {authLoading || (loading && mods.length === 0) ? (
-            <div className="col-span-full h-64 rounded-3xl bg-zinc-900/50 border border-white/5 animate-pulse"></div>
+            <>
+              <ModCardSkeleton />
+              <ModCardSkeleton />
+              <ModCardSkeleton />
+            </>
           ) : rankedMods.length === 0 ? (
             <div className="col-span-full p-20 text-center text-zinc-500 bg-zinc-900/30 border border-dashed border-white/10 rounded-[3rem] text-xl">
                No {modRoleView}s found in the system.
