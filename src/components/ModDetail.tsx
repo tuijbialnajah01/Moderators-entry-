@@ -236,123 +236,176 @@ export function ModDetail() {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
-      const accentColor: [number, number, number] = [30, 27, 75]; // Indigo 900
-      const textColor: [number, number, number] = [24, 24, 27]; // Zinc 900
+      const pageHeight = doc.internal.pageSize.height;
+      
+      // Premium Palette
+      const colors = {
+        primary: [15, 23, 42] as [number, number, number], // Slate 900
+        accent: [59, 130, 246] as [number, number, number], // Blue 500
+        gold: [217, 119, 6] as [number, number, number],   // Amber 600
+        text: [51, 65, 85] as [number, number, number],    // Slate 700
+        muted: [148, 163, 184] as [number, number, number], // Slate 400
+        border: [241, 245, 249] as [number, number, number] // Slate 100
+      };
 
-      // Helper to strip non-standard characters for jsPDF stability
       const safeText = (text: string) => {
         if (!text) return "N/A";
-        // Latin-1 Supplement contains symbols like Ø, Ý, etc. which are often supported by standard fonts
         return text
           .normalize("NFKD")
-          .replace(/[^\x20-\xFF\s]/g, "") // Allow Latin-1 range (extended ASCII)
+          .replace(/[^\x20-\xFF\s]/g, "")
           .replace(/\s+/g, " ")
           .trim() || "Unit Detail";
       };
 
-      // Background accent for header
-      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-      doc.rect(0, 0, pageWidth, 50, 'F');
+      // Header Branding
+      doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.rect(0, 0, pageWidth, 60, 'F');
+      
+      // Decorative header element
+      doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.rect(0, 58, pageWidth, 2, 'F');
 
-      // Title
-      doc.setFontSize(22);
+      // Header Text
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.text('OFFICIAL PERFORMANCE DOSSIER', 14, 25);
+      doc.setFontSize(26);
+      doc.text('PERFORMANCE ANALYTICS REPORT', 14, 28);
       
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`REGISTRY ID: ${mod.id?.toUpperCase()}`, 14, 38);
+      doc.setTextColor(colors.muted[0], colors.muted[1], colors.muted[2]);
+      doc.text(`SYSTEM REGISTRY: NO.${mod.id?.slice(-8).toUpperCase()}`, 14, 38);
+      doc.text(`DATE GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 14, 44);
 
-      // Metadata (Top Right)
+      // Status Badge
+      const status = (mod.status || 'ACTIVE').toUpperCase();
+      const isBlacklisted = status === 'BLACKLISTED';
+      doc.setFillColor(isBlacklisted ? 220 : 30, isBlacklisted ? 38 : 130, isBlacklisted ? 38 : 50);
+      doc.roundedRect(pageWidth - 55, 20, 41, 10, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(9);
-      doc.text(`AUDIT DATE: ${new Date().toLocaleDateString()}`, pageWidth - 70, 25, { align: 'left' });
-      doc.text(`SYSTEM REGISTRY: NOMINAL`, pageWidth - 70, 32, { align: 'left' });
+      doc.text(status, pageWidth - 34.5, 26.5, { align: 'center' });
 
       // Profile Section
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(24);
+      let currentY = 85;
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.setFontSize(32);
       doc.setFont('helvetica', 'bold');
-      doc.text(safeText(mod.name), 14, 70);
+      doc.text(safeText(mod.name), 14, currentY);
       
-      const rawRole = (mod.role || 'MODERATOR').toUpperCase();
-      const displayRole = rawRole === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR';
-
-      doc.setFontSize(11);
+      currentY += 10;
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(115, 115, 115);
-      doc.text(`DESIGNATION: ${displayRole}`, 14, 80);
-      doc.text(`REGISTRATION: ${mod.phoneNumber || 'NOT REGISTERED'}`, 14, 86);
+      doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 14, currentY);
 
-      // KPIs
+      currentY += 15;
+
+      // Stats Summary
       const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00';
       
       autoTable(doc, {
-        startY: 96,
-        head: [['ANALYTIC METRIC', 'VALUE / STATISTIC']],
+        startY: currentY,
+        head: [['ANALYTICAL KPI', 'QUANTIFIED DATA']],
         body: [
-          ['ACCUMULATED PERFORMANCE POINTS', `${mod.totalPoints || 0} PTS`],
-          ['TOTAL DATA LOGS PROCESSED', entries.length],
-          ['EFFICIENCY COEFFICIENT (P/E)', peRatio],
-          ['HONOR STANDING', `${mod.honorScore ?? 100} / 100`],
-          ['DEPLOYMENT STATUS', (mod.status || 'ACTIVE').toUpperCase()]
+          ['Total Performance Accumulation', `${mod.totalPoints || 0} POINTS`],
+          ['Aggregate Data Logs Processed', `${entries.length} ENTRIES`],
+          ['Performance-to-Entry Coefficient', `${peRatio} P/E`],
+          ['Subject Honor Standing', `${mod.honorScore ?? 100} / 100`],
+          ['Communication Registry ID', mod.phoneNumber || 'UNLINKED']
         ],
-        theme: 'grid',
-        headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
-        styles: { fontSize: 9, cellPadding: 5, font: 'helvetica' },
+        theme: 'striped',
+        headStyles: { 
+          fillColor: colors.primary, 
+          textColor: [255, 255, 255], 
+          fontSize: 10, 
+          fontStyle: 'bold', 
+          cellPadding: 6 
+        },
+        styles: { 
+          fontSize: 10, 
+          cellPadding: 6, 
+          font: 'helvetica',
+          textColor: colors.text
+        },
         columnStyles: {
-          1: { halign: 'right', fontStyle: 'bold', textColor: accentColor }
-        }
+          1: { halign: 'right', fontStyle: 'bold', textColor: colors.primary }
+        },
+        margin: { left: 14, right: 14 }
       });
 
-      // Activity Ledger
-      const lastY = (doc as any).lastAutoTable.finalY + 18;
-      doc.setFontSize(14);
+      currentY = (doc as any).lastAutoTable.finalY + 25;
+
+      // Activity Feed Section Header
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
-      doc.text('VERIFIED PERFORMANCE LEDGER', 14, lastY);
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.text('CHRONOLOGICAL ACTIVITY LEDGER', 14, currentY);
+      
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.line(14, currentY + 3, pageWidth - 14, currentY + 3);
 
       const entryRows = entries.map((e, idx) => [
-        `LOG #${entries.length - idx}`,
-        new Date(e.createdAt).toLocaleString(),
+        `ID-${entries.length - idx}`,
+        new Date(e.createdAt).toLocaleDateString(),
         `+${e.points || 0} PTS`,
         safeText(e.text)
       ]);
 
       autoTable(doc, {
-        startY: lastY + 6,
-        head: [['ID', 'TIMESTAMP', 'PTS', 'ENTRY DETAIL / DESCRIPTION']],
+        startY: currentY + 10,
+        head: [['LOG ID', 'DATE', 'POINTS', 'DESCRIPTION & LOGS DETAIL']],
         body: entryRows,
-        theme: 'striped',
-        headStyles: { fillColor: [63, 63, 70], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [248, 250, 252], 
+          textColor: colors.primary, 
+          fontStyle: 'bold', 
+          fontSize: 9,
+          lineWidth: 0.1,
+          lineColor: colors.border
+        },
+        styles: { 
+          fontSize: 9, 
+          cellPadding: 6, 
+          font: 'helvetica',
+          valign: 'middle',
+          overflow: 'linebreak'
+        },
         columnStyles: {
-          0: { cellWidth: 18 },
-          1: { cellWidth: 38 },
-          2: { cellWidth: 22, fontStyle: 'bold', halign: 'center' },
-          3: { cellWidth: 'auto' }
+          0: { cellWidth: 22, fontStyle: 'bold', textColor: colors.muted },
+          1: { cellWidth: 28 },
+          2: { cellWidth: 18, fontStyle: 'bold', halign: 'center', textColor: colors.gold },
+          3: { cellWidth: 'auto', textColor: colors.text }
         },
         didDrawPage: (data) => {
-          doc.setFontSize(7);
-          doc.setTextColor(160, 160, 160);
-          doc.text(`Official Audit Log • Page ${data.pageNumber}`, 14, doc.internal.pageSize.height - 10);
+          doc.setFontSize(8);
+          doc.setTextColor(colors.muted[0], colors.muted[1], colors.muted[2]);
+          doc.text(`Confidential Performance Audit • Page ${data.pageNumber}`, 14, pageHeight - 10);
         }
       });
 
-      // Footer
+      // Page Header Polish
       const totalPages = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text('GENERATED BY OFFICIAL MANAGEMENT SYSTEM • CONFIDENTIAL', 14, doc.internal.pageSize.height - 10);
-        doc.text(`PAGE ${i} OF ${totalPages}`, pageWidth - 30, doc.internal.pageSize.height - 10);
+        if (i > 1) {
+          doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+          doc.rect(0, 0, pageWidth, 15, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(8);
+          doc.text(`OFFICIAL PERFORMANCE DOSSIER • ${safeText(mod.name).toUpperCase()} • PAGE ${i} OF ${totalPages}`, 14, 10);
+        } else {
+          doc.setFontSize(8);
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PAGE ${i} OF ${totalPages}`, pageWidth - 30, 10);
+        }
       }
 
-      doc.save(`Audit_Report_${safeText(mod.name).replace(/\s+/g, '_')}.pdf`);
+      doc.save(`Audit_Log_${safeText(mod.name).replace(/\s+/g, '_')}.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
-      alert('PDF Error: Some characters in units/names might be incompatible.');
+      alert('Error generating PDF. Some characters may not be compatible.');
     }
   };
 
