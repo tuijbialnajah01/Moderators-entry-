@@ -47,6 +47,13 @@ export function ModDetail() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
+  // Drafts state
+  const [drafts, setDrafts] = useState<Entry[]>([]);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftText, setDraftText] = useState('');
+  const [draftPoints, setDraftPoints] = useState<number>(1);
+  const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
+
   useEffect(() => {
     if (!id) return;
 
@@ -75,6 +82,18 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.LIST, `mods/${id}/entries`);
     });
 
+    const draftsRef = collection(db, 'mods', id, 'drafts');
+    const qDrafts = query(draftsRef, orderBy('createdAt', 'desc'));
+    const unsubscribeDrafts = onSnapshot(qDrafts, (snapshot) => {
+      const fetchedDrafts: Entry[] = [];
+      snapshot.forEach((doc) => {
+        fetchedDrafts.push({ id: doc.id, ...doc.data() } as Entry);
+      });
+      setDrafts(fetchedDrafts);
+    }, (error) => {
+      console.error('Failed to subscribe to drafts', error);
+    });
+
     const allModsRef = collection(db, 'mods');
     const unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
       const fetchedMods: Mod[] = [];
@@ -87,9 +106,87 @@ export function ModDetail() {
     return () => {
       unsubscribeMod();
       unsubscribeEntries();
+      unsubscribeDrafts();
       unsubscribeAllMods();
     };
   }, [id, user, isAdmin]);
+
+  const handleAddDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !user || !draftText.trim() || !mod) return;
+
+    setIsSubmittingDraft(true);
+    try {
+      const draftId = crypto.randomUUID();
+      const draftRef = doc(db, `mods/${id}/drafts/${draftId}`);
+      
+      await setDoc(draftRef, {
+        text: draftText.trim(),
+        createdAt: Date.now(),
+        createdBy: user.uid,
+        points: draftPoints
+      });
+
+      setDraftText('');
+      setDraftPoints(1);
+      setShowDraftModal(false);
+    } catch (error) {
+      console.error('Failed to add draft', error);
+      alert('Failed to add draft. Only Admins can modify.');
+    } finally {
+      setIsSubmittingDraft(false);
+    }
+  };
+
+  const handleProcessDrafts = async () => {
+    if (!id || !user || drafts.length === 0 || !mod || isSubmitting) return;
+    setIsSubmitting(true);
+    
+    try {
+      const batch = writeBatch(db);
+      
+      const combinedText = drafts.map(d => `- ${d.text}`).join('\n');
+      const totalDraftPoints = drafts.reduce((sum, d) => sum + (d.points || 0), 0);
+      
+      const now = Date.now();
+      const entryId = crypto.randomUUID();
+      const newEntryRef = doc(db, `mods/${id}/entries/${entryId}`);
+      
+      batch.set(newEntryRef, {
+        text: combinedText,
+        createdAt: now,
+        createdBy: user.uid,
+        points: totalDraftPoints
+      });
+      
+      const modRef = doc(db, 'mods', id);
+      batch.update(modRef, {
+        lastEntryAt: now,
+        deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
+        updatedAt: now,
+        totalPoints: (mod.totalPoints || 0) + totalDraftPoints
+      });
+
+      drafts.forEach(d => {
+        batch.delete(doc(db, `mods/${id}/drafts/${d.id}`));
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Failed to process drafts to entry', error);
+      alert('Failed to process drafts.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && mod && drafts.length > 0) {
+      if (Date.now() >= mod.deadlineAt) {
+        handleProcessDrafts();
+      }
+    }
+  }, [mod, drafts, isAdmin]);
 
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -517,13 +614,22 @@ export function ModDetail() {
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
                 >
                   {isAdmin && (
-                    <button 
-                      onClick={() => { setShowEntryModal(true); setShowHeaderMenu(false); }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full"
-                    >
-                      <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-                      <span>Create New Entry</span>
-                    </button>
+                    <div className="flex flex-col gap-3">
+                      <button 
+                        onClick={() => { setShowEntryModal(true); setShowHeaderMenu(false); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-bold flex items-center gap-4 transition-colors shadow-lg shadow-black/20 w-full"
+                      >
+                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Create New Detail</span>
+                      </button>
+                      <button 
+                        onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
+                        className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Add Draft Mode</span>
+                      </button>
+                    </div>
                   )}
                 </motion.div>
               </>
@@ -806,6 +912,41 @@ export function ModDetail() {
             )}
           </div>
         </div>
+
+        {isAdmin && drafts.length > 0 && (
+          <div className="bg-[#1e1b4b] rounded-xl shadow-lg shadow-black/20 border border-indigo-500/20 overflow-hidden shrink-0 flex flex-col relative">
+            <div className="px-6 py-5 border-b border-indigo-500/20 bg-indigo-900/30 flex justify-between items-center">
+               <h4 className="text-lg font-bold text-indigo-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></div> Local Drafts System</h4>
+               <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50">Publish All Drafts Now</button>
+            </div>
+            
+            <div className="p-6">
+              <div className="pl-8 pr-2 py-2">
+                <ol className="list-decimal list-outside space-y-6 text-indigo-200 marker:text-indigo-500 marker:font-bold">
+                  {drafts.map((draft) => (
+                    <li key={draft.id} className="pl-2 border-b border-indigo-500/20 pb-6 last:border-0 last:pb-0 relative group">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-indigo-100 font-medium whitespace-pre-wrap">{draft.text}</span>
+                          {draft.points && (
+                            <span className="bg-amber-500 text-amber-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm ml-2 shrink-0">
+                              +{draft.points} pts
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-indigo-400 font-mono text-xs bg-indigo-950 inline-block px-2 py-1 rounded border border-indigo-500/20">
+                            Drafted {new Date(draft.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Footer System Info */}
         <div className="text-[5px] text-zinc-400 flex justify-between uppercase tracking-tighter mt-2">
@@ -813,6 +954,75 @@ export function ModDetail() {
           <span>Log Count: {entries.length}</span>
         </div>
       </div>
+
+      {showDraftModal && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowDraftModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-indigo-500/20 z-10 mx-auto transform-gpu">
+              <form onSubmit={handleAddDraft}>
+                <div className="bg-zinc-900 px-6 pb-6 pt-6">
+                  <h3 className="text-xl font-bold leading-6 text-indigo-300 mb-2">New Draft Mode Add</h3>
+                  <p className="text-sm text-indigo-400 mb-6 bg-indigo-500/10 px-3 py-2 rounded-md border border-indigo-500/20 inline-block font-medium">Adding this WILL NOT reset the timer. It saves locally to be processed automatically after 7 days.</p>
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">Draft Details</label>
+                    <textarea
+                      rows={4}
+                      className="block w-full rounded-lg border-indigo-500/10 bg-black text-white shadow-lg shadow-black/20 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3 border resize-none"
+                      placeholder="e.g. Draft recorded at link..."
+                      value={draftText}
+                      onChange={(e) => setDraftText(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-zinc-300 mb-4">Choose Points for this Draft</label>
+                    <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                      {[1, 2, 3, 5, 10, 15, 20, 25].map((pts) => (
+                        <button
+                          key={pts}
+                          type="button"
+                          onClick={() => setDraftPoints(pts)}
+                          className={`px-4 py-3 rounded-xl border text-lg font-bold transition-all ${draftPoints === pts ? 'bg-indigo-500 border-indigo-400 text-indigo-50 scale-105 shadow-lg shadow-indigo-500/20' : 'bg-black border-white/10 text-zinc-400 hover:border-white/30 hover:text-white'}`}
+                        >
+                          {pts}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em]">Custom Points</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={draftPoints.toString()}
+                        onChange={(e) => setDraftPoints(e.target.value ? parseInt(e.target.value) : 0)}
+                        className="w-full sm:w-32 bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all hover:border-white/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDraft || !draftText.trim()}
+                    className="inline-flex w-full justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50 transition-colors"
+                  >
+                    {isSubmittingDraft ? 'Saving Draft...' : 'Save Draft Mode'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
+                    onClick={() => setShowDraftModal(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEntryModal && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">

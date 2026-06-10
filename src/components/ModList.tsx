@@ -6,7 +6,7 @@ import { CountdownTimer } from './CountdownTimer';
 import { TermsModal } from './TermsModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search } from 'lucide-react';
+import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type SortMode = 'ranking' | 'timeLeft';
@@ -223,6 +223,41 @@ export function ModList() {
     return list;
   }, [mods, entriesMap, sortMode, viewMode, modRoleView, deferredSearchQuery]);
 
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Role', 'Status', 'Phone', 'Entries', 'Total Points', 'P/E Ratio', 'Last Active'];
+    const csvRows = [headers.join(',')];
+
+    rankedMods.forEach(mod => {
+      const isCritical = (mod.deadlineAt - Date.now()) <= 48 * 60 * 60 * 1000;
+      const isWarning = (mod.deadlineAt - Date.now()) <= 96 * 60 * 60 * 1000;
+      let statusStr = mod.status === 'blacklisted' ? 'Blacklisted' : mod.role === 'officer' ? 'Officer' : isCritical ? 'Critical' : isWarning ? 'Warning' : 'Active';
+      
+      const peRatio = mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00';
+      
+      const row = [
+        `"${mod.name.replace(/"/g, '""')}"`,
+        mod.role,
+        statusStr,
+        mod.phoneNumber || 'N/A',
+        mod.entryCount,
+        mod.totalPoints || 0,
+        peRatio,
+        `"${new Date(mod.lastEntryAt).toLocaleDateString()}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `moderator_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
       {/* Confirmation Modal */}
@@ -373,7 +408,17 @@ export function ModList() {
                 className="w-full pl-16 pr-6 py-4 sm:py-5 bg-zinc-900 border border-white/5 rounded-[2rem] text-lg sm:text-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-lg shadow-black/20 transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
               />
             </div>
-            <div className="relative flex justify-end w-full lg:w-auto">
+            <div className="relative flex justify-end w-full lg:w-auto gap-4">
+              {isAdmin && (
+                <button 
+                  onClick={handleExportCSV}
+                  className="flex items-center justify-center w-full lg:w-auto gap-2 px-6 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"
+                  title="Download Report"
+                >
+                  <Download className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
+                  <span className="hidden lg:inline">Report</span>
+                </button>
+              )}
               <button 
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                 className="flex items-center justify-center w-full lg:w-auto gap-4 px-8 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"

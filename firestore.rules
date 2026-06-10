@@ -77,6 +77,27 @@ service cloud.firestore {
         allow update: if isAdmin() && isValidEntry(incoming()); 
         allow delete: if isAdmin() && isValidId(entryId);
       }
+      match /drafts/{draftId} {
+        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
+        
+        function isValidDraft(data) {
+          return data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+                 (!('createdAt' in data) || data.createdAt is number) &&
+                 (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() <= 128)) &&
+                 (!('points' in data) || data.points is number) &&
+                 (!('updatedAt' in data) || data.updatedAt is number);
+        }
+
+        allow create: if isAdmin() &&
+                      isValidId(draftId) &&
+                      isValidDraft(incoming()) &&
+                      incoming().keys().hasAll(['text', 'createdAt', 'createdBy']) &&
+                      incoming().createdBy == request.auth.uid &&
+                      existsAfter(/databases/$(database)/documents/mods/$(modId)); 
+                      
+        allow update: if isAdmin() && isValidDraft(incoming()); 
+        allow delete: if isAdmin() && isValidId(draftId);
+      }
     }
   }
 }
