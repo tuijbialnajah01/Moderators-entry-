@@ -143,7 +143,7 @@ export function ModDetail() {
 
   const handleAddDraft = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !draftText.trim() || !mod) return;
+    if (!id || !isAdmin || !draftText.trim() || !mod) return;
 
     setIsSubmittingDraft(true);
     try {
@@ -153,7 +153,7 @@ export function ModDetail() {
       await setDoc(draftRef, {
         text: draftText.trim(),
         createdAt: Date.now(),
-        createdBy: user?.uid || 'guest',
+        createdBy: user?.uid || 'admin',
         points: draftPoints
       });
 
@@ -162,7 +162,7 @@ export function ModDetail() {
       setShowDraftModal(false);
     } catch (error) {
       console.error('Failed to add draft', error);
-      alert('Failed to add draft. Only Admins can modify.');
+      alert('Failed to add draft. Access Denied.');
     } finally {
       setIsSubmittingDraft(false);
     }
@@ -829,13 +829,15 @@ export function ModDetail() {
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
                 >
                   <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
-                      className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
-                    >
-                      <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
-                      <span>Add Performance Draft</span>
-                    </button>
+                    {isAdmin && (
+                      <button 
+                        onClick={() => { setShowDraftModal(true); setShowHeaderMenu(false); }}
+                        className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Add Performance Draft</span>
+                      </button>
+                    )}
                     <button 
                       onClick={() => { handleExportPDF(); setShowHeaderMenu(false); }}
                       className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
