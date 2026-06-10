@@ -13,22 +13,22 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
   return (
     <AnimatePresence>
       {show && (
-        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
-          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+        <div className="fixed inset-0 z-50 w-full flex items-center justify-center p-4">
+          <div className="absolute inset-0 flex items-center justify-center">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" 
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
               onClick={onClose}
             ></motion.div>
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.98, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="relative overflow-hidden rounded-[2rem] bg-zinc-900 text-left shadow-2xl w-full max-w-4xl border border-white/5 z-10 mx-auto flex flex-col h-[90vh] sm:h-[85vh] transform-gpu"
+              className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 shadow-2xl w-full max-w-4xl border border-white/10 z-10 mx-auto flex flex-col h-[90vh] sm:h-[85vh] transform-gpu will-change-transform"
             >
               <div className="bg-zinc-900 px-8 py-6 border-b border-white/5 flex items-center justify-between shrink-0">
                 <h3 className="text-3xl sm:text-4xl font-bold leading-6 text-white flex items-center gap-4">
@@ -54,7 +54,7 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                 </div>
               </div>
 
-              <div className="p-8 sm:p-10 overflow-y-auto flex-1 text-zinc-300 text-xl sm:text-2xl space-y-12 custom-scrollbar">
+              <div className="p-8 sm:p-12 overflow-y-auto flex-1 text-zinc-300 text-xl sm:text-2xl space-y-16 custom-scrollbar transform-gpu overscroll-contain scrolling-touch">
                 {roleView === 'moderator' ? (
                   <>
                     <div className="space-y-8">
@@ -196,23 +196,138 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
 
                     <div className="flex gap-5">
                       <span className="font-bold text-blue-400 text-3xl sm:text-4xl">3.</span>
-                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                         Help grow the community by bringing in new members (minimum 2)
-                      </p>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Community Growth Program :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-indigo-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-indigo-400">Recruitment Type</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-indigo-400">Quota</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-indigo-400 text-right">Points / User</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">New Community Members</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Inviting active participants to the ecosystem</p>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                      <p className="text-indigo-300 font-bold">Min. 2 / Week</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">2.5</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <p className="text-lg sm:text-xl text-indigo-300 flex items-start gap-3 pl-2 leading-relaxed">
+                              <span className="text-indigo-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-indigo-500/30">Requirement:</span>
+                              <span>To qualify as a valid contribution under this category, a minimum of 2 members must be recruited within a 7-day window. Each successful referral grants 2.5 performance points.</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex gap-5">
                       <span className="font-bold text-blue-400 text-3xl sm:text-4xl">4.</span>
-                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                        Organise An Event
-                      </p>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Organising Events :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-emerald-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-emerald-400">Activity Type</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-emerald-400">Conditions</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-emerald-400 text-right">Points Range</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="hover:bg-white/5 transition-colors border-b border-white/5">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Individual Event</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Organizing standalone certified events</p>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                      <p className="text-emerald-300 font-bold">Single Organizer</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">20 - 50</td>
+                                  </tr>
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Group Activity</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Shared organizational responsibility</p>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                      <p className="text-emerald-300 font-bold">Min. 4 Members</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">25 - 55</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <p className="text-lg sm:text-xl text-emerald-300 flex items-start gap-3 pl-2 leading-relaxed">
+                              <span className="text-emerald-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-emerald-500/30">Bonus Rule:</span>
+                              <span>For Group Activities, the +5 bonus applies to every verified member of the group, provided the team size is at least 4. All participants receive the full allocated range of points.</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex gap-5">
                       <span className="font-bold text-blue-400 text-3xl sm:text-4xl">5.</span>
-                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                        Work on any idea and make it successful. Collaborating on these initiatives within the group is fully permitted, and the activity timer will be reset for all contributing members upon successful completion.
-                      </p>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Innovation & Development :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-purple-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-purple-400">Project Category & Scope</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-purple-400 text-right">Points</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="hover:bg-white/5 transition-colors border-b border-white/5">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Innovation Project</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Bringing new community concepts to life, designing custom bot features, or building technical automation tools.</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">30 - 100</td>
+                                  </tr>
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Collaborative Development</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Joint contribution towards large-scale community improvements or shared technical projects.</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">+10</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="space-y-6 pt-2">
+                              <p className="text-lg sm:text-xl text-purple-300 flex items-start gap-3 pl-2 leading-relaxed">
+                                <span className="text-purple-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-purple-500/30">Mandatory:</span>
+                                <span>To initiate any project under this category, explicit permission must be obtained from an Officer or a higher-ranking official. Successful completion grants a reset of the activity timer for all contributing members.</span>
+                              </p>
+                              <p className="text-lg sm:text-xl text-emerald-400 flex items-start gap-3 pl-2 leading-relaxed font-bold">
+                                <span className="text-emerald-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-emerald-500/30">Distribution Rule:</span>
+                                <span>For any recognized group activity or joint development task, the allocated performance points will be distributed equally among all verified contributing members.</span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="mt-12 pt-12 border-t border-white/5 space-y-8">
