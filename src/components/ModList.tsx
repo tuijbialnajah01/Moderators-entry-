@@ -8,6 +8,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// No extra declarations needed for functional autoTable
 
 type SortMode = 'ranking' | 'timeLeft';
 type ViewMode = 'active' | 'blacklisted';
@@ -181,6 +185,23 @@ export function ModList() {
 
   const now = Date.now();
 
+  const officerRelationsMap = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    mods.forEach(m => {
+      if (m.role !== 'officer' && m.status !== 'blacklisted') {
+        const ids = m.officerIds || (m.officerId ? [m.officerId] : []);
+        ids.forEach(oid => {
+          if (!map[oid]) map[oid] = [];
+          map[oid].push({
+            ...m,
+            entryCount: entriesMap[m.id] || 0
+          });
+        });
+      }
+    });
+    return map;
+  }, [mods, entriesMap]);
+
   const rankedMods = useMemo(() => {
     let filtered = mods.filter(mod => {
       const status = mod.status || 'active';
@@ -223,42 +244,6 @@ export function ModList() {
     
     return list;
   }, [mods, entriesMap, sortMode, viewMode, modRoleView, deferredSearchQuery]);
-
-  const handleExportCSV = () => {
-    const headers = ['Name', 'Role', 'Status', 'Phone', 'Entries', 'Total Points', 'P/E Ratio', 'Honor Score', 'Last Active'];
-    const csvRows = [headers.join(',')];
-
-    rankedMods.forEach(mod => {
-      const isCritical = (mod.deadlineAt - Date.now()) <= 48 * 60 * 60 * 1000;
-      const isWarning = (mod.deadlineAt - Date.now()) <= 96 * 60 * 60 * 1000;
-      let statusStr = mod.status === 'blacklisted' ? 'Blacklisted' : mod.role === 'officer' ? 'Officer' : isCritical ? 'Critical' : isWarning ? 'Warning' : 'Active';
-      
-      const peRatio = mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00';
-      
-      const row = [
-        `"${mod.name.replace(/"/g, '""')}"`,
-        mod.role,
-        statusStr,
-        mod.phoneNumber || 'N/A',
-        mod.entryCount,
-        mod.totalPoints || 0,
-        peRatio,
-        mod.honorScore ?? 100,
-        `"${new Date(mod.lastEntryAt).toLocaleDateString()}"`
-      ];
-      csvRows.push(row.join(','));
-    });
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `moderator_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
@@ -411,16 +396,6 @@ export function ModList() {
               />
             </div>
             <div className="relative flex justify-end w-full lg:w-auto gap-4">
-              {isAdmin && (
-                <button 
-                  onClick={handleExportCSV}
-                  className="flex items-center justify-center w-full lg:w-auto gap-2 px-6 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"
-                  title="Download Report"
-                >
-                  <Download className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
-                  <span className="hidden lg:inline">Report</span>
-                </button>
-              )}
               <button 
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                 className="flex items-center justify-center w-full lg:w-auto gap-4 px-8 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"
@@ -607,7 +582,7 @@ export function ModList() {
                         <div className="flex flex-col gap-3 w-full max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
                            <p className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500 mb-2 px-1">Managed Units</p>
                            <ol className="space-y-3 text-sm w-full">
-                             {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').map(m => (
+                             {(officerRelationsMap[mod.id] || []).map(m => (
                                <li key={m.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
                                    <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-lg transition-colors truncate max-w-[180px]">
                                      {m.name}
@@ -627,7 +602,7 @@ export function ModList() {
                                </li>
                              ))}
                            </ol>
-                           {mods.filter(m => (m.officerIds?.includes(mod.id) || m.officerId === mod.id) && m.role !== 'officer' && m.status !== 'blacklisted').length === 0 && (
+                           {(!officerRelationsMap[mod.id] || officerRelationsMap[mod.id].length === 0) && (
                               <div className="py-12 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center">
                                 <span className="text-sm text-zinc-600 font-bold uppercase tracking-widest">No Active Units</span>
                               </div>

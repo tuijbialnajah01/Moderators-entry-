@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, writeBatch, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, writeBatch, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, Entry, HonorLog, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
-import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// No extra declarations needed for functional autoTable
 
 export function ModDetail() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +57,10 @@ export function ModDetail() {
   const [draftText, setDraftText] = useState('');
   const [draftPoints, setDraftPoints] = useState<number>(1);
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
+  const [draftToEdit, setDraftToEdit] = useState<Entry | null>(null);
+  const [editDraftText, setEditDraftText] = useState('');
+  const [editDraftPoints, setEditDraftPoints] = useState<number>(1);
+  const [isEditingDraft, setIsEditingDraft] = useState(false);
 
   // Honor state
   const [honorLogs, setHonorLogs] = useState<HonorLog[]>([]);
@@ -60,6 +68,11 @@ export function ModDetail() {
   const [honorChangeReason, setHonorChangeReason] = useState('');
   const [honorChangeAmount, setHonorChangeAmount] = useState<number>(1);
   const [isSubmittingHonor, setIsSubmittingHonor] = useState(false);
+  const [logToDelete, setLogToDelete] = useState<HonorLog | null>(null);
+  const [logToEdit, setLogToEdit] = useState<HonorLog | null>(null);
+  const [editLogAmount, setEditLogAmount] = useState<number>(0);
+  const [editLogReason, setEditLogReason] = useState('');
+  const [isProcessingLog, setIsProcessingLog] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -219,6 +232,110 @@ export function ModDetail() {
     }
   }, [mod, drafts, isAdmin]);
 
+  const handleExportPDF = () => {
+    if (!mod) return;
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const accentColor: [number, number, number] = [30, 27, 75]; // Indigo 900
+      const textColor: [number, number, number] = [24, 24, 27]; // Zinc 900
+
+      // Helper to strip non-ASCII/emojis for jsPDF compatibility
+      const safeText = (text: string) => text.replace(/[^\x00-\x7F]/g, "").trim() || "Unit";
+
+      // Background accent for header
+      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.rect(0, 0, pageWidth, 50, 'F');
+
+      // Title
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text('OFFICIAL MODERATOR AUDIT REPORT', 14, 25);
+      
+      doc.setFontSize(10);
+      doc.text(`SYSTEM REGISTRY LOG • REF: ${mod.id?.slice(0, 8).toUpperCase()}`, 14, 35);
+
+      // Metadata
+      doc.setFontSize(10);
+      doc.text(`AUDIT DATE: ${new Date().toLocaleDateString()}`, pageWidth - 70, 25);
+      doc.text(`AUDIT TIME: ${new Date().toLocaleTimeString()}`, pageWidth - 70, 32);
+
+      // Profile Section
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(18);
+      doc.text(safeText(mod.name), 14, 65);
+      
+      const displayRole = (mod.role || 'moderator').toUpperCase() === 'MOD' ? 'MODERATOR' : (mod.role || 'moderator').toUpperCase();
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`DESIGNATION: ${displayRole}`, 14, 72);
+      doc.text(`CONTACT: ${mod.phoneNumber || 'NOT REGISTERED'}`, 14, 77);
+
+      // KPIs
+      const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00';
+      
+      autoTable(doc, {
+        startY: 85,
+        head: [['AUDIT METRIC', 'SPECIFICATION']],
+        body: [
+          ['ACCUMULATED PERFORMANCE POINTS', `${mod.totalPoints || 0} PTS`],
+          ['TOTAL PROCESSED ENTRIES', entries.length],
+          ['EFFICIENCY COEFFICIENT (P/E)', peRatio],
+          ['HONOR STANDING', `${mod.honorScore ?? 100}/100`],
+          ['ACCOUNT STATUS', (mod.status || 'ACTIVE').toUpperCase()]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 5 },
+        columnStyles: {
+          1: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+
+      // Activity Ledger
+      const lastY = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(14);
+      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.text('VERIFIED PERFORMANCE LEDGER', 14, lastY);
+
+      const entryRows = entries.map(e => [
+        new Date(e.createdAt).toLocaleString(),
+        `+${e.points || 0}`,
+        safeText(e.text)
+      ]);
+
+      autoTable(doc, {
+        startY: lastY + 5,
+        head: [['TIMESTAMP', 'PTS', 'ENTRY DETAIL']],
+        body: entryRows,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 45 },
+          1: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }
+        }
+      });
+
+      // Footer
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('GENERATED BY OFFICIAL MANAGEMENT SYSTEM • CONFIDENTIAL', 14, doc.internal.pageSize.height - 10);
+        doc.text(`PAGE ${i} OF ${totalPages}`, pageWidth - 30, doc.internal.pageSize.height - 10);
+      }
+
+      doc.save(`Audit_Report_${safeText(mod.name).replace(/\s+/g, '_')}.pdf`);
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('PDF Error: Some characters in units/names might be incompatible.');
+    }
+  };
+
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !user || !entryText.trim() || !mod) return;
@@ -307,6 +424,131 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
     } finally {
       setIsSubmittingHonor(false);
+    }
+  };
+
+  const handleDeleteDraft = async (draftId: string) => {
+    if (!id || !isAdmin) return;
+    try {
+      const batch = writeBatch(db);
+      const draftRef = doc(db, `mods/${id}/drafts/${draftId}`);
+      batch.delete(draftRef);
+      await batch.commit();
+      await updateDoc(doc(db, 'mods', id), { updatedAt: Date.now() });
+    } catch (error) {
+      console.error('Failed to delete draft', error);
+    }
+  };
+
+  const handleUpdateDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !isAdmin || !draftToEdit || !editDraftText.trim()) return;
+    setIsEditingDraft(true);
+    try {
+      const draftRef = doc(db, `mods/${id}/drafts/${draftToEdit.id}`);
+      await updateDoc(draftRef, {
+        text: editDraftText.trim(),
+        points: editDraftPoints,
+        updatedAt: Date.now()
+      });
+      setDraftToEdit(null);
+    } catch (error) {
+      console.error('Failed to update draft', error);
+      alert('Failed to update draft.');
+    } finally {
+      setIsEditingDraft(false);
+    }
+  };
+
+  const handleUpdateHonorLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !isAdmin || !logToEdit || !editLogReason.trim()) return;
+    setIsProcessingLog(true);
+    try {
+      const batch = writeBatch(db);
+      const logRef = doc(db, `mods/${id}/honor_logs/${logToEdit.id}`);
+      const modRef = doc(db, 'mods', id);
+
+      const amountDiff = editLogAmount - logToEdit.amount;
+      
+      batch.update(logRef, {
+        amount: editLogAmount,
+        reason: editLogReason.trim(),
+        updatedAt: Date.now()
+      });
+
+      if (amountDiff !== 0) {
+        batch.update(modRef, {
+          honorScore: increment(amountDiff),
+          updatedAt: Date.now()
+        });
+      }
+
+      await batch.commit();
+      setLogToEdit(null);
+    } catch (error) {
+      console.error('Failed to update honor log', error);
+      handleFirestoreError(error, OperationType.WRITE, `mods/${id}/honor_logs`);
+    } finally {
+      setIsProcessingLog(false);
+    }
+  };
+
+  const handleDeleteHonorLog = async () => {
+    if (!id || !isAdmin || !logToDelete) return;
+    setIsProcessingLog(true);
+    try {
+      const batch = writeBatch(db);
+      const logRef = doc(db, `mods/${id}/honor_logs/${logToDelete.id}`);
+      const modRef = doc(db, 'mods', id);
+
+      batch.delete(logRef);
+      // Correcting points: subtract the original amount
+      batch.update(modRef, {
+        honorScore: increment(-logToDelete.amount),
+        updatedAt: Date.now()
+      });
+
+      await batch.commit();
+      setLogToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete honor log', error);
+      handleFirestoreError(error, OperationType.WRITE, `mods/${id}/honor_logs`);
+    } finally {
+      setIsProcessingLog(false);
+    }
+  };
+
+  const handleRevertHonorLog = async (log: HonorLog) => {
+    if (!id || !isAdmin || !user) return;
+    try {
+      const batch = writeBatch(db);
+      const logRef = doc(db, `mods/${id}/honor_logs/${log.id}`);
+      const draftRef = doc(collection(db, `mods/${id}/drafts`));
+      const modRef = doc(db, 'mods', id);
+
+      const now = Date.now();
+
+      // Delete log
+      batch.delete(logRef);
+      // Subtract points from honor score
+      batch.update(modRef, {
+        honorScore: increment(-log.amount),
+        updatedAt: now
+      });
+      // Add as draft
+      batch.set(draftRef, {
+        text: `[REVERTED HONOR LOG] ${log.reason}`,
+        points: 0,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: user.uid
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Failed to revert honor log', error);
+      handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
     }
   };
 
@@ -717,6 +959,13 @@ export function ModDetail() {
                         <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
                         <span>Adjust Honor</span>
                       </button>
+                      <button 
+                        onClick={() => { handleExportPDF(); setShowHeaderMenu(false); }}
+                        className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <Download className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
+                        <span>PDF Report</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -1023,11 +1272,35 @@ export function ModDetail() {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-indigo-100 font-medium whitespace-pre-wrap">{draft.text}</span>
-                          {draft.points && (
-                            <span className="bg-amber-500 text-amber-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm ml-2 shrink-0">
-                              +{draft.points} pts
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {draft.points && (
+                              <span className="bg-amber-500 text-amber-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm">
+                                +{draft.points} pts
+                              </span>
+                            )}
+                            {isAdmin && (
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setDraftToEdit(draft);
+                                    setEditDraftText(draft.text || '');
+                                    setEditDraftPoints(draft.points || 1);
+                                  }}
+                                  className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white px-3 py-1 rounded-lg border border-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteDraft(draft.id!)}
+                                  className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-3 py-1 rounded-lg border border-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Revert</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-indigo-400 font-mono text-xs bg-indigo-950 inline-block px-2 py-1 rounded border border-indigo-500/20">
@@ -1057,8 +1330,36 @@ export function ModDetail() {
                       <span className={`absolute -left-[35px] top-1 flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/30 bg-[#064e3b] shadow-inner font-bold text-[10px] ${log.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {log.amount > 0 ? '+' : ''}{log.amount}
                       </span>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-emerald-100 font-medium whitespace-pre-wrap">{log.reason}</span>
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="text-emerald-100 font-medium whitespace-pre-wrap">{log.reason}</span>
+                          {isAdmin && (
+                            <div className="flex items-center gap-2 shrink-0">
+                               <button 
+                                onClick={() => {
+                                  setLogToEdit(log);
+                                  setEditLogAmount(log.amount);
+                                  setEditLogReason(log.reason);
+                                }}
+                                className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-lg transition-all active:scale-90" title="Edit"
+                              >
+                                <Pencil className="w-4.5 h-4.5" />
+                              </button>
+                              <button 
+                                onClick={() => handleRevertHonorLog(log)}
+                                className="p-2.5 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black rounded-lg transition-all active:scale-90" title="Revert to Draft"
+                              >
+                                <RotateCcw className="w-4.5 h-4.5" />
+                              </button>
+                              <button 
+                                onClick={() => setLogToDelete(log)}
+                                className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all active:scale-90" title="Delete Log"
+                              >
+                                <Trash2 className="w-4.5 h-4.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-emerald-400 font-mono text-xs bg-emerald-950 inline-block px-2 py-1 rounded border border-emerald-500/20">
                             {new Date(log.createdAt).toLocaleString()}
@@ -1142,6 +1443,74 @@ export function ModDetail() {
                     type="button"
                     className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
                     onClick={() => setShowDraftModal(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {draftToEdit && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setDraftToEdit(null)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-blue-500/20 z-10 mx-auto transform-gpu">
+              <form onSubmit={handleUpdateDraft}>
+                <div className="bg-zinc-900 px-6 pb-6 pt-6">
+                  <h3 className="text-xl font-bold leading-6 text-blue-300 mb-2">Edit Draft Entry</h3>
+                  <p className="text-sm text-blue-400 mb-6 bg-blue-500/10 px-3 py-2 rounded-md border border-blue-500/20 inline-block font-medium">Updating this will modify the local draft without affecting the timer.</p>
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">Draft Details</label>
+                    <textarea
+                      rows={4}
+                      className="block w-full rounded-lg border-blue-500/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border resize-none"
+                      value={editDraftText}
+                      onChange={(e) => setEditDraftText(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-zinc-300 mb-4">Choose Points for this Draft</label>
+                    <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                      {[1, 2, 3, 5, 10, 15, 20, 25].map((pts) => (
+                        <button
+                          key={pts}
+                          type="button"
+                          onClick={() => setEditDraftPoints(pts)}
+                          className={`px-4 py-3 rounded-xl border text-lg font-bold transition-all ${editDraftPoints === pts ? 'bg-blue-500 border-blue-400 text-blue-50 scale-105 shadow-lg shadow-blue-500/20' : 'bg-black border-white/10 text-zinc-400 hover:border-white/30 hover:text-white'}`}
+                        >
+                          {pts}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em]">Custom Points</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={editDraftPoints.toString()}
+                        onChange={(e) => setEditDraftPoints(e.target.value ? parseInt(e.target.value) : 0)}
+                        className="w-full sm:w-32 bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all hover:border-white/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
+                  <button
+                    type="submit"
+                    disabled={isEditingDraft || !editDraftText.trim()}
+                    className="inline-flex w-full justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-500 sm:w-auto disabled:opacity-50 transition-colors"
+                  >
+                    {isEditingDraft ? 'Updating Draft...' : 'Update Draft'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
+                    onClick={() => setDraftToEdit(null)}
                   >
                     Cancel
                   </button>
@@ -1439,6 +1808,89 @@ export function ModDetail() {
                     type="button"
                     className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
                     onClick={() => setShowHonorModal(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Honor Log Confirm Delete Modal */}
+      {logToDelete && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLogToDelete(null)}></div>
+            <div className="relative bg-zinc-900 border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-2">Delete Honor Log?</h3>
+              <p className="text-zinc-400 text-sm mb-6">This will automatically subtract <span className="text-red-400 font-bold">{logToDelete.amount} pts</span> from moderator's honor score.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleDeleteHonorLog}
+                  disabled={isProcessingLog}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl disabled:opacity-50"
+                >
+                  Confirm Delete
+                </button>
+                <button 
+                  onClick={() => setLogToDelete(null)}
+                  className="flex-1 bg-zinc-800 text-zinc-300 font-bold py-3 rounded-xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Honor Log Edit Modal */}
+      {logToEdit && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLogToEdit(null)}></div>
+            <div className="relative bg-zinc-900 border border-white/10 p-8 rounded-[2rem] w-full max-w-md shadow-2xl">
+              <form onSubmit={handleUpdateHonorLog}>
+                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter text-emerald-300">Edit Honor Entry</h3>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Adjustment Amount</label>
+                    <div className="flex gap-2">
+                       <input 
+                        type="number"
+                        value={editLogAmount}
+                        onChange={(e) => setEditLogAmount(parseInt(e.target.value) || 0)}
+                        className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-emerald-500 outline-none"
+                       />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Reason / Detail</label>
+                    <textarea 
+                      value={editLogReason}
+                      onChange={(e) => setEditLogReason(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:border-emerald-500 outline-none h-24 resize-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 flex flex-col gap-3">
+                  <button 
+                    type="submit"
+                    disabled={isProcessingLog}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    Save Changes
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setLogToEdit(null)}
+                    className="w-full bg-zinc-800 text-zinc-400 font-bold py-4 rounded-2xl"
                   >
                     Cancel
                   </button>

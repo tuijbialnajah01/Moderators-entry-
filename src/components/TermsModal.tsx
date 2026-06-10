@@ -60,35 +60,93 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                     <div className="space-y-8">
                       <div className="flex gap-5">
                         <span className="font-bold text-blue-400 text-3xl sm:text-4xl">1.</span>
-                        <div className="space-y-6 pt-1">
-                          <p className="font-bold text-white text-2xl sm:text-3xl">Provide updates or reports :-</p>
+                        <div className="space-y-10 pt-1 flex-1">
+                          <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Activity & Points System :-</p>
                           
-                          <div className="pl-6 sm:pl-8 space-y-8">
-                            <div>
-                              <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> user reports</p>
-                              <ul className="pl-10 mt-4 space-y-4 text-zinc-400 leading-relaxed">
-                                <li className="flex items-center gap-4"><span className="text-blue-500 font-bold">→</span> Bad behaviour of users</li>
-                                <li className="flex items-center gap-4"><span className="text-blue-500 font-bold">→</span> unauthorised automation</li>
-                              </ul>
+                          <div className="space-y-12">
+                            {/* Table 1: Reports */}
+                            <div className="space-y-4">
+                              <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="bg-blue-600/10 border-b border-white/10">
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-blue-400">Reports & Diagnostics</th>
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-blue-400 text-right">Points</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5">
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                      <td className="px-6 py-5">
+                                        <p className="text-zinc-200 font-bold">User Reports</p>
+                                        <p className="text-sm text-zinc-500 mt-1">Bad behavior, unauthorized automation, harassment</p>
+                                      </td>
+                                      <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">1 - 5</td>
+                                    </tr>
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                      <td className="px-6 py-5">
+                                        <p className="text-zinc-200 font-bold">Bot Broken Usages</p>
+                                        <p className="text-sm text-zinc-500 mt-1">Directly reporting bugs not listed in dev logs</p>
+                                      </td>
+                                      <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">1 - 5</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            <p className="text-lg sm:text-xl text-zinc-300 flex items-start gap-3 pl-2 leading-relaxed">
+                                <span className="text-blue-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-blue-500/30">Note:</span>
+                                <span>
+                                  Broken Usages will be counted only if they aren't recorded as &lt;in dev&gt; in 
+                                  <a href="https://usages-ls.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-black decoration-2 underline-offset-4 ml-1">
+                                    usages-ls.vercel.app
+                                  </a>
+                                </span>
+                              </p>
                             </div>
 
-                            <div>
-                              <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> Bot Broken Usages</p>
-                              <ul className="pl-10 mt-4 space-y-4 text-zinc-400 border-l-4 border-white/5 ml-4">
-                                <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> <span className="leading-relaxed">Broken Usages will be counted only if they aren't recorded as &lt;in dev&gt; in <a href="https://usages-ls.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-medium mix-blend-plus-lighter">usages-ls.vercel.app</a></span></li>
-                              </ul>
+                            {/* Table 2: Suggestions */}
+                            <div className="space-y-4">
+                              <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="bg-purple-600/10 border-b border-white/10">
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-purple-400">Development Suggestions</th>
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-purple-400 text-right">Points</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                      <td className="px-6 py-5">
+                                        <p className="text-zinc-200 font-bold">Feature Proposals</p>
+                                        <p className="text-sm text-zinc-500 mt-1">New ideas for bot features or community workflows</p>
+                                      </td>
+                                      <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">1 - 5</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
 
-                            <div>
-                              <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> user concerns / suggestions for Bot feature</p>
-                            </div>
-
-                            <div>
-                              <p className="text-zinc-200 font-semibold flex items-center gap-4"><span className="w-3 h-3 rounded-full bg-zinc-500"></span> community activity</p>
-                              <ul className="pl-10 mt-4 space-y-4 text-zinc-400 leading-relaxed">
-                                <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> participate in community activity</li>
-                                <li className="flex items-start gap-4"><span className="text-blue-500 font-bold mt-1">→</span> Make at least one group active for three days</li>
-                              </ul>
+                            {/* Table 3: Community Activity */}
+                            <div className="space-y-4">
+                              <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="bg-amber-600/10 border-b border-white/10">
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-amber-400">Community Engagement</th>
+                                      <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-amber-400 text-right">Points</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                      <td className="px-6 py-5">
+                                        <p className="text-zinc-200 font-bold">Group Activation</p>
+                                        <p className="text-sm text-zinc-500 mt-1">Make at least one group active for 3+ consecutive days</p>
+                                      </td>
+                                      <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">15</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           </div>
 
@@ -102,10 +160,38 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                     </div>
 
                     <div className="flex gap-5">
-                      <span className="font-bold text-blue-400 text-3xl sm:text-4xl">2.</span>
-                      <p className="pt-1 text-zinc-200 leading-relaxed font-medium">
-                        Suggest new ideas or improvements that can benefit the community ( Specially By Mods )
-                      </p>
+                      <span className="font-bold text-emerald-400 text-3xl sm:text-4xl">2.</span>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Special Moderator Proposals :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-emerald-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-emerald-400">Mod-Led Innovations</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-emerald-400 text-right">Points</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Strategic Ideas</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Providing unique ideas specifically for moderator workflows or community growth</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">5 - 15</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <p className="text-lg sm:text-xl text-red-400 flex items-start gap-3 pl-2 leading-relaxed font-bold italic">
+                              <span className="text-red-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-red-500/30 not-italic">Warning:</span>
+                              <span>Ideas can be rejected immediately if there are excessive flaws or logical inconsistencies.</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex gap-5">
