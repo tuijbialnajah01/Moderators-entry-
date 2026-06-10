@@ -301,14 +301,12 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                                   <tr className="hover:bg-white/5 transition-colors border-b border-white/5">
                                     <td className="px-6 py-5">
                                       <p className="text-zinc-200 font-bold">Innovation Project</p>
-                                      <p className="text-sm text-zinc-500 mt-1">Bringing new community concepts to life, designing custom bot features, or building technical automation tools.</p>
                                     </td>
                                     <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">30 - 100</td>
                                   </tr>
                                   <tr className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-5">
                                       <p className="text-zinc-200 font-bold">Collaborative Development</p>
-                                      <p className="text-sm text-zinc-500 mt-1">Joint contribution towards large-scale community improvements or shared technical projects.</p>
                                     </td>
                                     <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">+10</td>
                                   </tr>
