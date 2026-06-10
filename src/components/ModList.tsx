@@ -115,15 +115,16 @@ export function ModList() {
       const targetName = newModName.trim().toLowerCase();
       const targetPhone = newModPhone.trim();
       const isDuplicateName = mods.some(mod => mod.name.toLowerCase() === targetName && (mod.role || 'moderator') === newModRole);
-      const isDuplicatePhone = mods.some(mod => mod.phoneNumber === targetPhone);
+      const duplicatePhoneMember = mods.find(mod => mod.phoneNumber === targetPhone);
 
       if (isDuplicateName) {
         setAddModError(`A ${newModRole} with this name already exists.`);
         return;
       }
 
-      if (isDuplicatePhone) {
-        setAddModError(`This phone number is already registered to another ${newModRole}.`);
+      if (duplicatePhoneMember) {
+        const role = duplicatePhoneMember.role || 'moderator';
+        setAddModError(`This phone number is already registered to ${duplicatePhoneMember.name} (${role.toUpperCase()}).`);
         return;
       }
 

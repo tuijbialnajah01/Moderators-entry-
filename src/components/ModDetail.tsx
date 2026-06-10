@@ -602,9 +602,9 @@ export function ModDetail() {
         return;
       }
 
-      const isDuplicatePhone = allMods.some(m => m.id !== id && m.phoneNumber === targetPhone);
-      if (isDuplicatePhone) {
-        setEditProfileError('This phone number is already registered to another user.');
+      const duplicatePhoneMember = allMods.find(m => m.id !== id && m.phoneNumber === targetPhone);
+      if (duplicatePhoneMember) {
+        setEditProfileError(`This phone number is already registered to ${duplicatePhoneMember.name} (${(duplicatePhoneMember.role || 'moderator').toUpperCase()}).`);
         setIsSavingProfile(false);
         return;
       }
