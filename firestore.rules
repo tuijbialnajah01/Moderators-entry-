@@ -58,7 +58,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
       
       match /entries/{entryId} {
-        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
+        allow get, list: if true;
         
         function isValidEntry(data) {
           return data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
@@ -79,7 +79,7 @@ service cloud.firestore {
         allow delete: if isAdmin() && isValidId(entryId);
       }
       match /drafts/{draftId} {
-        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
+        allow get, list: if true;
         
         function isValidDraft(data) {
           return data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
@@ -100,7 +100,7 @@ service cloud.firestore {
         allow delete: if isAdmin() && isValidId(draftId);
       }
       match /honor_logs/{logId} {
-        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
+        allow get, list: if true;
         
         function isValidHonorLog(data) {
           return data.amount is number && 

@@ -1006,11 +1006,13 @@ export function ModDetail() {
           </div>
         </div>
 
-        {isAdmin && drafts.length > 0 && (
+        {drafts.length > 0 && (
           <div className="bg-[#1e1b4b] rounded-xl shadow-lg shadow-black/20 border border-indigo-500/20 overflow-hidden shrink-0 flex flex-col relative">
             <div className="px-6 py-5 border-b border-indigo-500/20 bg-indigo-900/30 flex justify-between items-center">
                <h4 className="text-lg font-bold text-indigo-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></div> Local Drafts System</h4>
-               <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50">Publish All Drafts Now</button>
+               {isAdmin && (
+                 <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50">Publish All Drafts Now</button>
+               )}
             </div>
             
             <div className="p-6">
