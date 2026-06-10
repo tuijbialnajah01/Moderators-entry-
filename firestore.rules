@@ -50,6 +50,7 @@ service cloud.firestore {
                     ( !('officerId' in incoming()) || incoming().officerId is string || incoming().officerId == null ) &&
                     ( !('officerIds' in incoming()) || incoming().officerIds is list ) &&
                     ( !('totalPoints' in incoming()) || incoming().totalPoints is number ) &&
+                    ( !('honorScore' in incoming()) || incoming().honorScore is number ) &&
                     ( !('lastEntryAt' in incoming()) || incoming().lastEntryAt is number ) &&
                     ( !('deadlineAt' in incoming()) || incoming().deadlineAt is number ) &&
                     ( !('updatedAt' in incoming()) || incoming().updatedAt is number );
@@ -97,6 +98,24 @@ service cloud.firestore {
                       
         allow update: if isAdmin() && isValidDraft(incoming()); 
         allow delete: if isAdmin() && isValidId(draftId);
+      }
+      match /honor_logs/{logId} {
+        allow get, list: if isAdmin() || get(/databases/$(database)/documents/mods/$(modId)).data.status != 'blacklisted';
+        
+        function isValidHonorLog(data) {
+          return data.amount is number && 
+                 data.reason is string && data.reason.size() <= 1000 &&
+                 data.createdAt is number &&
+                 data.createdBy is string &&
+                 data.type in ['entry_auto', 'manual'];
+        }
+
+        allow create: if isAdmin() &&
+                      isValidId(logId) &&
+                      isValidHonorLog(incoming()) &&
+                      existsAfter(/databases/$(database)/documents/mods/$(modId)); 
+                      
+        allow update, delete: if isAdmin();
       }
     }
   }

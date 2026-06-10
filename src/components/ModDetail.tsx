@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, collection, onSnapshot, query, orderBy, setDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Mod, Entry, handleFirestoreError, OperationType } from '../types';
+import { Mod, Entry, HonorLog, handleFirestoreError, OperationType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
 import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -54,6 +54,13 @@ export function ModDetail() {
   const [draftPoints, setDraftPoints] = useState<number>(1);
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
 
+  // Honor state
+  const [honorLogs, setHonorLogs] = useState<HonorLog[]>([]);
+  const [showHonorModal, setShowHonorModal] = useState(false);
+  const [honorChangeReason, setHonorChangeReason] = useState('');
+  const [honorChangeAmount, setHonorChangeAmount] = useState<number>(1);
+  const [isSubmittingHonor, setIsSubmittingHonor] = useState(false);
+
   useEffect(() => {
     if (!id) return;
 
@@ -94,6 +101,18 @@ export function ModDetail() {
       console.error('Failed to subscribe to drafts', error);
     });
 
+    const honorLogsRef = collection(db, 'mods', id, 'honor_logs');
+    const qHonorLogs = query(honorLogsRef, orderBy('createdAt', 'desc'));
+    const unsubscribeHonorLogs = onSnapshot(qHonorLogs, (snapshot) => {
+      const fetchedHonorLogs: HonorLog[] = [];
+      snapshot.forEach((doc) => {
+        fetchedHonorLogs.push({ id: doc.id, ...doc.data() } as HonorLog);
+      });
+      setHonorLogs(fetchedHonorLogs);
+    }, (error) => {
+      console.error('Failed to subscribe to honor logs', error);
+    });
+
     const allModsRef = collection(db, 'mods');
     const unsubscribeAllMods = onSnapshot(allModsRef, (snapshot) => {
       const fetchedMods: Mod[] = [];
@@ -107,6 +126,7 @@ export function ModDetail() {
       unsubscribeMod();
       unsubscribeEntries();
       unsubscribeDrafts();
+      unsubscribeHonorLogs();
       unsubscribeAllMods();
     };
   }, [id, user, isAdmin]);
@@ -160,11 +180,22 @@ export function ModDetail() {
       });
       
       const modRef = doc(db, 'mods', id);
+      const currentHonor = mod.honorScore ?? 100;
       batch.update(modRef, {
         lastEntryAt: now,
         deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
         updatedAt: now,
-        totalPoints: (mod.totalPoints || 0) + totalDraftPoints
+        totalPoints: (mod.totalPoints || 0) + totalDraftPoints,
+        honorScore: currentHonor + 1
+      });
+
+      const honorLogId = crypto.randomUUID();
+      batch.set(doc(db, `mods/${id}/honor_logs/${honorLogId}`), {
+        amount: 1,
+        reason: 'Auto-increment on entry completion via drafts',
+        createdAt: now,
+        createdBy: user.uid,
+        type: 'entry_auto'
       });
 
       drafts.forEach(d => {
@@ -208,11 +239,22 @@ export function ModDetail() {
       });
       
       const modRef = doc(db, 'mods', id);
+      const currentHonor = mod.honorScore ?? 100;
       batch.update(modRef, {
         lastEntryAt: now,
         deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
         updatedAt: now,
-        totalPoints: (mod.totalPoints || 0) + selectedPoints
+        totalPoints: (mod.totalPoints || 0) + selectedPoints,
+        honorScore: currentHonor + 1
+      });
+
+      const honorLogId = crypto.randomUUID();
+      batch.set(doc(db, `mods/${id}/honor_logs/${honorLogId}`), {
+        amount: 1,
+        reason: 'Auto-increment on new entry',
+        createdAt: now,
+        createdBy: user.uid,
+        type: 'entry_auto'
       });
 
       await batch.commit();
@@ -226,6 +268,45 @@ export function ModDetail() {
       handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddHonor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !user || !mod || !honorChangeReason.trim() || honorChangeAmount === 0 || Math.abs(honorChangeAmount) > 5) return;
+
+    setIsSubmittingHonor(true);
+    try {
+      const now = Date.now();
+      const batch = writeBatch(db);
+      
+      const modRef = doc(db, 'mods', id);
+      const currentHonor = mod.honorScore ?? 100;
+      batch.update(modRef, {
+        honorScore: currentHonor + honorChangeAmount,
+        updatedAt: now
+      });
+
+      const logId = crypto.randomUUID();
+      batch.set(doc(db, `mods/${id}/honor_logs/${logId}`), {
+        amount: honorChangeAmount,
+        reason: honorChangeReason.trim(),
+        createdAt: now,
+        createdBy: user.uid,
+        type: 'manual'
+      });
+
+      await batch.commit();
+
+      setHonorChangeReason('');
+      setHonorChangeAmount(1);
+      setShowHonorModal(false);
+    } catch (error) {
+      console.error('Failed to change honor', error);
+      alert('Failed to update honor score.');
+      handleFirestoreError(error, OperationType.WRITE, `mods/${id}`);
+    } finally {
+      setIsSubmittingHonor(false);
     }
   };
 
@@ -629,6 +710,13 @@ export function ModDetail() {
                         <Plus className="w-8 h-8 sm:w-10 sm:h-10" />
                         <span>Add Draft Mode</span>
                       </button>
+                      <button 
+                        onClick={() => { setShowHonorModal(true); setShowHeaderMenu(false); }}
+                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
+                      >
+                        <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
+                        <span>Adjust Honor</span>
+                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -753,6 +841,11 @@ export function ModDetail() {
                 <span className="w-3 h-3 rounded-full shrink-0 bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]"></span>
                 <span className="text-purple-400/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">P/E Ratio <span className="lowercase text-zinc-500 font-normal tracking-normal">(Points to Entry)</span></span>
                 <span className="font-black text-purple-400 text-3xl sm:text-4xl ml-auto tracking-tighter">{entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00'}</span>
+              </div>
+              <div className="flex items-center gap-5 text-xl sm:text-2xl text-zinc-300 bg-emerald-500/5 p-6 rounded-3xl border border-emerald-500/10 shadow-inner col-span-full">
+                <span className="w-3 h-3 rounded-full shrink-0 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></span>
+                <span className="text-emerald-400/70 text-xs sm:text-sm font-black uppercase tracking-[0.3em] shrink-0">Honor Score</span>
+                <span className="font-black text-emerald-400 text-3xl sm:text-4xl ml-auto tracking-tighter">{mod.honorScore ?? 100}</span>
               </div>
             </div>
           </div>
@@ -938,6 +1031,39 @@ export function ModDetail() {
                           <span className="text-indigo-400 font-mono text-xs bg-indigo-950 inline-block px-2 py-1 rounded border border-indigo-500/20">
                             Drafted {new Date(draft.createdAt).toLocaleString()}
                           </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {honorLogs.length > 0 && (
+          <div className="bg-[#022c22] rounded-xl shadow-lg shadow-black/20 border border-emerald-500/20 overflow-hidden shrink-0 flex flex-col relative mt-4">
+            <div className="px-6 py-5 border-b border-emerald-500/20 bg-emerald-900/30 flex items-center">
+               <h4 className="text-lg font-bold text-emerald-300 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-emerald-400" /> Honor Analytics</h4>
+            </div>
+            
+            <div className="p-6">
+              <div className="pl-4 pr-2 py-2">
+                <ol className="relative border-l border-emerald-500/30 space-y-6 text-emerald-200">
+                  {honorLogs.map((log) => (
+                    <li key={log.id} className="ml-6 pl-2 relative">
+                      <span className={`absolute -left-[35px] top-1 flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/30 bg-[#064e3b] shadow-inner font-bold text-[10px] ${log.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {log.amount > 0 ? '+' : ''}{log.amount}
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-emerald-100 font-medium whitespace-pre-wrap">{log.reason}</span>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-emerald-400 font-mono text-xs bg-emerald-950 inline-block px-2 py-1 rounded border border-emerald-500/20">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </span>
+                          {log.type === 'entry_auto' && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Auto Credit</span>
+                          )}
                         </div>
                       </div>
                     </li>
@@ -1259,6 +1385,68 @@ export function ModDetail() {
         </div>
       )}
       
+      {showHonorModal && isAdmin && (
+        <div className="fixed inset-0 z-50 overflow-y-auto w-full">
+          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowHonorModal(false)}></div>
+            <div className="relative transform overflow-hidden rounded-xl bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-emerald-500/20 z-10 mx-auto transform-gpu">
+              <form onSubmit={handleAddHonor}>
+                <div className="bg-zinc-900 px-6 pb-6 pt-6">
+                  <h3 className="text-xl font-bold leading-6 text-emerald-300 mb-2">Adjust Honor Score</h3>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">Change Amount (-5 to +5)</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="range" 
+                        min="-5" 
+                        max="5" 
+                        value={honorChangeAmount}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val !== 0) setHonorChangeAmount(val);
+                        }}
+                        className="flex-1 accent-emerald-500"
+                      />
+                      <span className={`w-12 text-center font-black text-xl ${honorChangeAmount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {honorChangeAmount > 0 ? '+' : ''}{honorChangeAmount}
+                      </span>
+                    </div>
+                    {honorChangeAmount === 0 && <p className="text-red-400 text-xs mt-1">Amount cannot be 0.</p>}
+                  </div>
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">Reason for Adjustment</label>
+                    <textarea
+                      rows={3}
+                      className="block w-full rounded-lg border-emerald-500/10 bg-black text-white shadow-lg shadow-black/20 focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-3 border resize-none"
+                      placeholder="e.g. Exceptional community assistance..."
+                      value={honorChangeReason}
+                      onChange={(e) => setHonorChangeReason(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingHonor || !honorChangeReason.trim() || honorChangeAmount === 0}
+                    className="inline-flex w-full justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-500 sm:w-auto disabled:opacity-50 transition-colors"
+                  >
+                    {isSubmittingHonor ? 'Applying...' : 'Apply Adjustment'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-300 shadow-sm border border-white/10 hover:bg-zinc-800 sm:mt-0 sm:w-auto transition-colors"
+                    onClick={() => setShowHonorModal(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Assign Moderator Modal */}
       {showAssignModal && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">

@@ -11,6 +11,7 @@ export interface Mod {
   officerId?: string; // Legacy
   officerIds?: string[];
   totalPoints?: number;
+  honorScore?: number;
 }
 
 export interface Entry {
@@ -19,6 +20,15 @@ export interface Entry {
   createdAt: number;
   createdBy: string;
   points?: number;
+}
+
+export interface HonorLog {
+  id: string;
+  amount: number;
+  reason: string;
+  createdAt: number;
+  createdBy: string;
+  type: 'entry_auto' | 'manual';
 }
 
 export enum OperationType {

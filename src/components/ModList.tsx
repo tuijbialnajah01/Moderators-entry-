@@ -122,6 +122,7 @@ export function ModList() {
           status: 'active',
           role: newModRole,
           totalPoints: 0,
+          honorScore: 100,
         });
 
         setNewModName('');
@@ -224,7 +225,7 @@ export function ModList() {
   }, [mods, entriesMap, sortMode, viewMode, modRoleView, deferredSearchQuery]);
 
   const handleExportCSV = () => {
-    const headers = ['Name', 'Role', 'Status', 'Phone', 'Entries', 'Total Points', 'P/E Ratio', 'Last Active'];
+    const headers = ['Name', 'Role', 'Status', 'Phone', 'Entries', 'Total Points', 'P/E Ratio', 'Honor Score', 'Last Active'];
     const csvRows = [headers.join(',')];
 
     rankedMods.forEach(mod => {
@@ -242,6 +243,7 @@ export function ModList() {
         mod.entryCount,
         mod.totalPoints || 0,
         peRatio,
+        mod.honorScore ?? 100,
         `"${new Date(mod.lastEntryAt).toLocaleDateString()}"`
       ];
       csvRows.push(row.join(','));
@@ -537,6 +539,12 @@ export function ModList() {
                         <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">P/E</span>
                         <strong className="text-xl sm:text-3xl text-purple-400 font-black">
                           {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
+                        </strong>
+                      </p>
+                      <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner min-w-[140px]">
+                        <span className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black">Honor</span>
+                        <strong className="text-xl sm:text-3xl text-emerald-400 font-black">
+                          {mod.honorScore ?? 100}
                         </strong>
                       </p>
                       <p className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 min-w-[160px]">
