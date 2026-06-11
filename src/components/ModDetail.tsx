@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { Mod, Entry, HonorLog, handleFirestoreError, OperationType } from '../types';
 import { ModDetailSkeleton } from './Skeletons';
 import { CountdownTimer } from './CountdownTimer';
-import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw, ExternalLink } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -65,6 +65,8 @@ export function ModDetail() {
   const [showHonorModal, setShowHonorModal] = useState(false);
   const [honorChangeReason, setHonorChangeReason] = useState('');
   const [honorChangeAmount, setHonorChangeAmount] = useState<number>(1);
+  const [honorChangeEvidenceUrl, setHonorChangeEvidenceUrl] = useState('');
+  const [evidencePreviewUrl, setEvidencePreviewUrl] = useState<string | null>(null);
   const [isSubmittingHonor, setIsSubmittingHonor] = useState(false);
   const [logToDelete, setLogToDelete] = useState<HonorLog | null>(null);
   const [logToEdit, setLogToEdit] = useState<HonorLog | null>(null);
@@ -443,38 +445,65 @@ export function ModDetail() {
     }
   };
 
-  const handleAddHonor = async (e: React.FormEvent) => {
+  const handleSaveHonor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !user || !mod || !honorChangeReason.trim() || isSubmittingHonor) return;
 
     setIsSubmittingHonor(true);
     try {
       const batch = writeBatch(db);
-      const honorLogId = crypto.randomUUID();
-      const honorLogRef = doc(db, `mods/${id}/honor_logs/${honorLogId}`);
-      
       const now = Date.now();
-      batch.set(honorLogRef, {
-        amount: honorChangeAmount,
-        reason: honorChangeReason.trim(),
-        createdAt: now,
-        createdBy: user.uid,
-        type: 'manual'
-      });
+      
+      if (logToEdit) {
+        // Update existing log
+        const honorLogRef = doc(db, `mods/${id}/honor_logs/${logToEdit.id}`);
+        const amountDifference = honorChangeAmount - logToEdit.amount;
+        
+        batch.update(honorLogRef, {
+          amount: honorChangeAmount,
+          reason: honorChangeReason.trim(),
+          evidenceUrl: honorChangeEvidenceUrl.trim() || null,
+          updatedAt: now,
+          updatedBy: user.uid
+        });
+        
+        if (amountDifference !== 0) {
+          const modRef = doc(db, 'mods', id);
+          batch.update(modRef, {
+            honorScore: (mod.honorScore ?? 100) + amountDifference,
+            updatedAt: now
+          });
+        }
+      } else {
+        // Add new log
+        const honorLogId = crypto.randomUUID();
+        const honorLogRef = doc(db, `mods/${id}/honor_logs/${honorLogId}`);
+        
+        batch.set(honorLogRef, {
+          amount: honorChangeAmount,
+          reason: honorChangeReason.trim(),
+          evidenceUrl: honorChangeEvidenceUrl.trim() || null,
+          createdAt: now,
+          createdBy: user.uid,
+          type: 'manual'
+        });
 
-      const modRef = doc(db, 'mods', id);
-      batch.update(modRef, {
-        honorScore: (mod.honorScore ?? 100) + honorChangeAmount,
-        updatedAt: now
-      });
+        const modRef = doc(db, 'mods', id);
+        batch.update(modRef, {
+          honorScore: (mod.honorScore ?? 100) + honorChangeAmount,
+          updatedAt: now
+        });
+      }
 
       await batch.commit();
       setShowHonorModal(false);
+      setLogToEdit(null);
       setHonorChangeReason('');
       setHonorChangeAmount(1);
+      setHonorChangeEvidenceUrl('');
     } catch (error) {
-      console.error('Failed to add honor log', error);
-      alert('Failed to adjust honor score.');
+      console.error('Failed to save honor log', error);
+      alert('Failed to save adjustment.');
     } finally {
       setIsSubmittingHonor(false);
     }
@@ -1319,15 +1348,42 @@ export function ModDetail() {
                             )}
                          </div>
                          {isAdmin && (
-                           <button 
-                             onClick={() => handleDeleteHonorLog(log.id!, log.amount)}
-                             className="text-zinc-700 hover:text-red-500 transition-all p-2 bg-black/20 rounded-xl border border-transparent hover:border-red-500/20"
-                           >
-                             <Trash2 className="w-6 h-6" />
-                           </button>
+                           <div className="flex items-center gap-2">
+                             <button 
+                               onClick={() => {
+                                 setLogToEdit(log);
+                                 setHonorChangeAmount(log.amount);
+                                 setHonorChangeReason(log.reason);
+                                 setHonorChangeEvidenceUrl(log.evidenceUrl || '');
+                               }}
+                               className="text-zinc-700 hover:text-blue-500 transition-all p-2 bg-black/20 rounded-xl border border-transparent hover:border-blue-500/20"
+                               title="Edit Log"
+                             >
+                               <Pencil className="w-6 h-6" />
+                             </button>
+                             <button 
+                               onClick={() => handleDeleteHonorLog(log.id!, log.amount)}
+                               className="text-zinc-700 hover:text-red-500 transition-all p-2 bg-black/20 rounded-xl border border-transparent hover:border-red-500/20"
+                               title="Delete Log"
+                             >
+                               <Trash2 className="w-6 h-6" />
+                             </button>
+                           </div>
                          )}
                       </div>
                       <p className="text-zinc-100 text-2xl leading-relaxed font-bold tracking-tight">{log.reason}</p>
+                      
+                      {log.evidenceUrl && (
+                        <div className="mt-4 flex">
+                          <button 
+                            onClick={() => setEvidencePreviewUrl(log.evidenceUrl!)}
+                            className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-6 py-3 rounded-xl border border-blue-600/30 text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 active:scale-95 group/btn"
+                          >
+                            <ExternalLink className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                            View Evidence
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -1480,20 +1536,87 @@ export function ModDetail() {
         </div>
       )}
 
+      {/* Evidence Preview Modal */}
+      <AnimatePresence>
+        {evidencePreviewUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col"
+          >
+            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-white/5 bg-black/50">
+              <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <ExternalLink className="w-6 h-6 text-blue-400" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-wider">Evidence Explorer</h3>
+                    <p className="text-zinc-500 text-xs font-bold truncate max-w-[200px] sm:max-w-md">{evidencePreviewUrl}</p>
+                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a 
+                  href={evidencePreviewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-xs font-black uppercase tracking-widest"
+                >
+                   Open Link
+                </a>
+                <button 
+                  onClick={() => setEvidencePreviewUrl(null)}
+                  className="bg-zinc-800 hover:bg-red-600 text-white p-4 rounded-xl transition-all active:scale-95 shadow-xl group"
+                >
+                  <RotateCcw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 w-full h-full p-4 sm:p-8 flex items-center justify-center overflow-hidden">
+               <div className="w-full h-full rounded-3xl overflow-hidden bg-black/40 border border-white/10 shadow-2xl relative group">
+                  <iframe 
+                    src={evidencePreviewUrl}
+                    className="w-full h-full border-none bg-zinc-100"
+                    title="Evidence View"
+                    sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                  />
+                  
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-8 text-center bg-black/90 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="max-w-xs space-y-4">
+                        <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+                        <p className="text-white font-black uppercase text-xl">Preview Blocked?</p>
+                        <p className="text-zinc-400 text-sm font-bold">External sites may block in-app previews for security. If the screen above is blank, please open the link directly.</p>
+                        <a 
+                          href={evidencePreviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block bg-blue-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs pointer-events-auto active:scale-95 transition-transform"
+                        >
+                          Open Link Directly
+                        </a>
+                      </div>
+                  </div>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Honor Modal */}
-      {showHonorModal && isAdmin && (
+      {(showHonorModal || logToEdit) && isAdmin && (
         <div className="fixed inset-0 z-50 overflow-y-auto w-full">
           <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => setShowHonorModal(false)}></div>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={() => { setShowHonorModal(false); setLogToEdit(null); }}></div>
             <div className="relative transform overflow-hidden rounded-[2rem] bg-zinc-900 text-left shadow-2xl transition-all w-full max-w-xl border border-white/5 z-10 mx-auto transform-gpu">
-              <form onSubmit={handleAddHonor}>
+              <form onSubmit={handleSaveHonor}>
                 <div className="bg-zinc-900 px-8 pb-8 pt-8">
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
                       <Trophy className="w-8 h-8 text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black leading-6 text-white uppercase tracking-wider">Adjust Honor Standing</h3>
+                      <h3 className="text-2xl font-black leading-6 text-white uppercase tracking-wider">{logToEdit ? 'Edit Honor Record' : 'Adjust Honor Standing'}</h3>
                       <p className="text-zinc-500 text-sm font-bold mt-1">Current Score: <span className="text-white">{mod.honorScore ?? 100}</span></p>
                     </div>
                   </div>
@@ -1508,6 +1631,17 @@ export function ModDetail() {
                         value={honorChangeReason}
                         onChange={(e) => setHonorChangeReason(e.target.value)}
                         required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Evidence URL (Optional)</label>
+                      <input
+                        type="url"
+                        className="block w-full rounded-2xl border-white/10 bg-black text-white shadow-inner focus:border-emerald-500 focus:ring-emerald-500 text-lg p-5 border transition-all placeholder:text-zinc-700 font-bold"
+                        placeholder="https://evidence-link.com/..."
+                        value={honorChangeEvidenceUrl}
+                        onChange={(e) => setHonorChangeEvidenceUrl(e.target.value)}
                       />
                     </div>
 
@@ -1545,11 +1679,11 @@ export function ModDetail() {
                     disabled={isSubmittingHonor || !honorChangeReason.trim()}
                     className="flex-1 sm:flex-none inline-flex justify-center rounded-2xl border border-transparent bg-emerald-600 px-8 py-4 text-lg font-black text-white shadow-xl shadow-emerald-900/20 hover:bg-emerald-500 focus:outline-none transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50"
                   >
-                    {isSubmittingHonor ? 'Verifying...' : 'Finalize Adjustment'}
+                    {isSubmittingHonor ? 'Verifying...' : logToEdit ? 'Update Record' : 'Finalize Adjustment'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowHonorModal(false)}
+                    onClick={() => { setShowHonorModal(false); setLogToEdit(null); }}
                     className="flex-1 sm:flex-none inline-flex justify-center rounded-2xl border border-white/10 bg-zinc-800 px-8 py-4 text-lg font-black text-zinc-300 shadow-lg hover:bg-zinc-700 focus:outline-none transition-all active:scale-95 uppercase tracking-widest"
                   >
                     Cancel

@@ -13,6 +13,7 @@ export interface Mod {
   officerIds?: string[];
   totalPoints?: number;
   honorScore?: number;
+  entryCount: number;
 }
 
 export interface Entry {
@@ -30,6 +31,7 @@ export interface HonorLog {
   createdAt: number;
   createdBy: string;
   type: 'entry_auto' | 'manual';
+  evidenceUrl?: string;
 }
 
 export enum OperationType {
