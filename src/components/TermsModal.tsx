@@ -61,7 +61,7 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                       <div className="flex gap-5">
                         <span className="font-bold text-blue-400 text-3xl sm:text-4xl">1.</span>
                         <div className="space-y-10 pt-1 flex-1">
-                          <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Activity & Points System :-</p>
+                          <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Reports & Suggestions :-</p>
                           
                           <div className="space-y-12">
                             {/* Table 1: Reports */}
@@ -321,6 +321,58 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                               <p className="text-lg sm:text-xl text-emerald-400 flex items-start gap-3 pl-2 leading-relaxed font-bold">
                                 <span className="text-emerald-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-emerald-500/30">Distribution Rule:</span>
                                 <span>For any recognized group activity or joint development task, the allocated performance points will be distributed equally among all verified contributing members.</span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-5">
+                      <span className="font-bold text-blue-400 text-3xl sm:text-4xl">6.</span>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Training Newbies :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-blue-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-blue-400">Training Activity</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-blue-400 text-right">Points</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">New User Orientation</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Training new members about Pokémon commands and bot mechanics</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">10 - 20</td>
+                                  </tr>
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Fresh Pokémon Spawning</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Spawning new Pokémon for community members (Per Pokémon)</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">5</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="space-y-6 pt-2">
+                              <p className="text-lg sm:text-xl text-blue-300 flex items-start gap-3 pl-2 leading-relaxed">
+                                <span className="text-blue-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-blue-500/30">Important:</span>
+                                <span>Free giveaway Pokémon will not be counted. Pokémon spawning is only valid if a proper charge is taken from the user.</span>
+                              </p>
+                              <p className="text-lg sm:text-xl text-amber-400 flex items-start gap-3 pl-2 leading-relaxed font-bold">
+                                <span className="text-amber-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-amber-500/30">Price Reference:</span>
+                                <span>All Pokémon prices and spawning rates can be verified at 
+                                  <a href="https://psdredd.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-black decoration-2 underline-offset-4 ml-1">
+                                    psdredd.vercel.app
+                                  </a>
+                                </span>
                               </p>
                             </div>
                           </div>

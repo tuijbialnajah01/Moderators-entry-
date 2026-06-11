@@ -42,6 +42,7 @@ export function ModDetail() {
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [editProfileName, setEditProfileName] = useState('');
   const [editProfilePhone, setEditProfilePhone] = useState('');
+  const [editProfileGroup, setEditProfileGroup] = useState('');
   const [editProfileError, setEditProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -612,6 +613,7 @@ export function ModDetail() {
       await updateDoc(doc(db, 'mods', id), { 
         name: editProfileName.trim(), 
         phoneNumber: editProfilePhone.trim(), 
+        ...(mod.role === 'officer' && { group: editProfileGroup }),
         updatedAt: Date.now() 
       });
       setShowEditProfileModal(false);
@@ -879,7 +881,9 @@ export function ModDetail() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6"
+                  transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                  style={{ willChange: "transform, opacity", transformOrigin: "top right" }}
+                  className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6 transform-gpu"
                 >
                   <div className="flex flex-col gap-3">
                     {isAdmin && (
@@ -967,6 +971,11 @@ export function ModDetail() {
                           setShowEditProfileModal(true); 
                           setEditProfileName(mod.name); 
                           setEditProfilePhone(mod.phoneNumber || ''); 
+                          if (mod.role === 'officer') {
+                            const groupSymbols = ['.', '-', ':', '#', '$', '+', '/', '?'];
+                            const sym = groupSymbols.find(s => mod.name.includes(s));
+                            setEditProfileGroup(mod.group || sym || 'Other');
+                          }
                           setEditProfileError(''); 
                         }} 
                         className="p-4 bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-2xl transition-all border border-white/10 flex items-center gap-3 text-sm font-bold shadow-lg"
@@ -1694,6 +1703,22 @@ export function ModDetail() {
                         required
                       />
                     </div>
+                    {mod.role === 'officer' && (
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Officer Group</label>
+                        <select
+                          className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+                          value={editProfileGroup}
+                          onChange={(e) => setEditProfileGroup(e.target.value)}
+                        >
+                          {['Other', '.', '-', ':', '#', '$', '+', '/', '?'].map(group => (
+                            <option key={group} value={group}>
+                              {group === 'Other' ? 'None (Other)' : `Group ${group}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">

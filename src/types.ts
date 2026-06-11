@@ -8,6 +8,7 @@ export interface Mod {
   updatedAt: number;
   status?: 'active' | 'blacklisted';
   role?: 'moderator' | 'officer';
+  group?: string;
   officerId?: string; // Legacy
   officerIds?: string[];
   totalPoints?: number;

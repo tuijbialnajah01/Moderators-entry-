@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, handleFirestoreError, OperationType } from '../types';
@@ -15,6 +15,148 @@ import { motion, AnimatePresence } from 'motion/react';
 type SortMode = 'ranking' | 'timeLeft';
 type ViewMode = 'active' | 'blacklisted';
 
+const ModCardDetails = React.memo(({ 
+  mod, 
+  officerRelationsMap, 
+  draftsMap, 
+  isAdmin, 
+  handleStatusChange, 
+  isCritical 
+}: { 
+  mod: Mod, 
+  officerRelationsMap: Record<string, any[]>, 
+  draftsMap: Record<string, number>,
+  isAdmin: boolean,
+  handleStatusChange: (id: string, s: 'active' | 'blacklisted') => void,
+  isCritical: boolean
+}) => {
+  return (
+    <div className="flex flex-col md:flex-row border-t border-white/5 relative bg-black/20">
+      <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Entries</span>
+                <strong className="text-2xl text-white font-black">{mod.entryCount}</strong>
+              </div>
+              {draftsMap[mod.id] > 0 && (
+                <div className="bg-indigo-500/10 px-5 py-4 rounded-3xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 animate-pulse">
+                  <span className="text-indigo-400 text-[10px] uppercase tracking-[0.2em] font-black">Drafts</span>
+                  <strong className="text-2xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
+                </div>
+              )}
+              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Points</span>
+                <strong className="text-2xl text-amber-400 flex items-center gap-2 font-black">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                  {mod.totalPoints || 0}
+                </strong>
+              </div>
+              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">P/E Ratio</span>
+                <strong className="text-2xl text-purple-400 font-black">
+                  {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
+                </strong>
+              </div>
+              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Honor</span>
+                <strong className="text-2xl text-emerald-400 font-black">
+                  {mod.honorScore ?? 100}
+                </strong>
+              </div>
+              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1 col-span-full sm:col-span-1">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Active Since</span>
+                <strong className="text-lg text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
+              </div>
+            </div>
+          </div>
+          
+          {isAdmin && (
+            <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex gap-2">
+                 {mod.status === 'blacklisted' ? (
+                    <button 
+                      onClick={() => handleStatusChange(mod.id, 'active')}
+                      className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-emerald-600/30 active:scale-95 shadow-lg"
+                    >
+                      Re-Hire Member
+                    </button>
+                 ) : (
+                    <button 
+                      onClick={() => handleStatusChange(mod.id, 'blacklisted')}
+                      className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-red-600/20 active:scale-95"
+                    >
+                      Move to Blacklist
+                    </button>
+                 )}
+              </div>
+            </div>
+          )}
+          <div className="mt-4 flex flex-row-reverse">
+            <Link 
+              to={`/mod/${mod.id}`}
+              className="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest px-6 py-2.5 bg-blue-400/5 rounded-xl border border-blue-400/10 hover:bg-blue-400/10 transition-all cursor-pointer inline-flex items-center"
+            >
+              Profile &rarr;
+            </Link>
+          </div>
+        </div>
+        
+        <div className={`w-full md:w-[32rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
+          <div className={`flex-1 flex flex-col p-6 sm:p-8 ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
+            {mod.role !== 'officer' && (
+              <p className={`text-xs uppercase tracking-[0.3em] font-black mb-6 ${mod.status === 'blacklisted' ? 'text-zinc-600' : isCritical ? 'text-red-500' : 'text-zinc-500'} text-center`}>
+                {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
+              </p>
+            )}
+            <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-4'}`}>
+              {mod.status === 'blacklisted' ? (
+                <div className="text-zinc-700 font-mono text-4xl font-black tracking-widest">--:--:--</div>
+              ) : mod.role === 'officer' ? (
+                <div className="flex flex-col gap-3 w-full max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
+                   <p className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500 mb-2 px-1">Managed Units</p>
+                   <ol className="space-y-3 text-sm w-full">
+                     {(officerRelationsMap[mod.id] || []).map(m => (
+                       <li key={m.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
+                           <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-lg transition-colors truncate max-w-[180px]">
+                             {m.name}
+                           </Link>
+                           <div className="flex items-center gap-3 shrink-0">
+                             <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20" title="Points">
+                               <Trophy className="w-3.5 h-3.5" />
+                               {m.totalPoints || 0}
+                             </div>
+                             <div className="flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-xl text-xs font-black border border-purple-500/20" title="P/E Ratio">
+                               P/E {m.entryCount > 0 ? ((m.totalPoints || 0) / m.entryCount).toFixed(1) : '0.0'}
+                             </div>
+                             {draftsMap[m.id] > 0 && (
+                               <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-xl text-xs font-black border border-indigo-500/20 animate-pulse" title="Pending Drafts">
+                                 D {draftsMap[m.id]}
+                               </div>
+                             )}
+                             <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
+                               <CountdownTimer deadlineAt={m.deadlineAt} compact />
+                             </span>
+                           </div>
+                       </li>
+                     ))}
+                   </ol>
+                   {(!officerRelationsMap[mod.id] || officerRelationsMap[mod.id].length === 0) && (
+                      <div className="py-12 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center">
+                        <span className="text-sm text-zinc-600 font-bold uppercase tracking-widest">No Active Units</span>
+                      </div>
+                   )}
+                </div>
+              ) : (
+                <CountdownTimer deadlineAt={mod.deadlineAt} />
+              )}
+            </div>
+          </div>
+        </div>
+    </div>
+  );
+});
+
 export function ModList() {
   const [mods, setMods] = useState<Mod[]>([]);
   const [entriesMap, setEntriesMap] = useState<Record<string, number>>({});
@@ -28,6 +170,7 @@ export function ModList() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [newModName, setNewModName] = useState('');
   const [newModPhone, setNewModPhone] = useState('');
+  const [newModGroup, setNewModGroup] = useState('Other');
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +181,7 @@ export function ModList() {
   const [modRoleView, setModRoleView] = useState<'moderator' | 'officer'>('moderator');
   const [newModRole, setNewModRole] = useState<'moderator' | 'officer'>('moderator');
   const [termsRoleView, setTermsRoleView] = useState<'moderator' | 'officer'>('moderator');
+  const [expandedModId, setExpandedModId] = useState<string | null>(null);
 
   useEffect(() => {
     // Regular users can only see active mods.
@@ -138,6 +282,7 @@ export function ModList() {
         await setDoc(docRef, {
           name: newModName.trim(),
           phoneNumber: newModPhone.trim(),
+          ...(newModRole === 'officer' && { group: newModGroup }),
           lastEntryAt: now,
           deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
           createdAt: now,
@@ -160,12 +305,10 @@ export function ModList() {
     }
   };
 
-  const handleStatusChange = async (modId: string, newStatus: 'active' | 'blacklisted') => {
+  const handleStatusChange = useCallback(async (modId: string, newStatus: 'active' | 'blacklisted') => {
     if (!isAdmin) return;
-    
-    // Open confirmation first
     setConfirmModal({ show: true, modId, action: newStatus });
-  };
+  }, [isAdmin]);
 
   const executeStatusChange = async () => {
     const { modId, action } = confirmModal;
@@ -345,6 +488,8 @@ export function ModList() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                  style={{ willChange: "transform, opacity", transformOrigin: "top right" }}
                   className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl z-[30] p-6 flex flex-col gap-6 transform-gpu"
                 >
 
@@ -435,6 +580,8 @@ export function ModList() {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                      style={{ willChange: "transform, opacity", transformOrigin: "top right" }}
                       className="absolute right-0 mt-4 w-full sm:w-96 bg-zinc-900 border border-white/5 rounded-[2rem] shadow-2xl z-[30] p-4 transform-gpu"
                     >
                     {isAdmin && (
@@ -482,165 +629,165 @@ export function ModList() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 w-full max-w-6xl mx-auto pb-16">
+        <div className="w-full max-w-6xl mx-auto pb-16">
           {authLoading || (loading && mods.length === 0) ? (
-            <>
+            <div className="flex flex-col gap-4">
               <ModCardSkeleton />
               <ModCardSkeleton />
               <ModCardSkeleton />
-            </>
+            </div>
           ) : rankedMods.length === 0 ? (
             <div className="col-span-full p-20 text-center text-zinc-500 bg-zinc-900/30 border border-dashed border-white/10 rounded-[3rem] text-xl">
                No {modRoleView}s found in the system.
             </div>
-          ) : rankedMods.map((mod, index) => {
-            const timeLeft = mod.deadlineAt - now;
-            const isCritical = mod.role === 'officer' ? false : timeLeft < 24 * 60 * 60 * 1000;
-            const isWarning = mod.role === 'officer' ? false : timeLeft < 3 * 24 * 60 * 60 * 1000;
-            const totalMs = 7 * 24 * 60 * 60 * 1000;
-            const progress = mod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeft / totalMs) * 100));
-            const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
+          ) : (() => {
+            const renderCard = (mod: typeof mods[0], index: number) => {
+              const timeLeft = mod.deadlineAt - now;
+              const isCritical = mod.role === 'officer' ? false : timeLeft < 24 * 60 * 60 * 1000;
+              const isWarning = mod.role === 'officer' ? false : timeLeft < 3 * 24 * 60 * 60 * 1000;
+              const totalMs = 7 * 24 * 60 * 60 * 1000;
+              const progress = mod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeft / totalMs) * 100));
+              const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
+              const isExpanded = expandedModId === mod.id;
 
-            return (
-              <div key={mod.id} className={`group bg-zinc-900 rounded-[2.5rem] border border-white/5 hover:border-blue-500/20 shadow-2xl shadow-black/40 hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-500 flex flex-col md:flex-row overflow-hidden relative transform-gpu ${isTopRank ? 'ring-2 ring-blue-500/50 ring-offset-4 ring-offset-black' : ''}`}>
-                <div className="p-8 sm:p-10 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-5 mb-4">
-                      {sortMode === 'ranking' ? (
-                        <span className={`w-12 h-12 flex items-center justify-center rounded-2xl font-black text-xl shrink-0 ${isTopRank ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/30' : 'bg-zinc-800 text-zinc-500'}`}>
-                          #{index + 1}
-                        </span>
-                      ) : (
-                        <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
-                          <Clock className="w-6 h-6" />
-                        </div>
-                      )}
-                      <h3 className="font-black text-3xl sm:text-4xl lg:text-5xl text-white hover:text-blue-400 transition-colors truncate tracking-tight">
-                        <Link to={`/mod/${mod.id}`} className="block w-full truncate">{mod.name}</Link>
-                      </h3>
-                      {isTopRank && <Trophy className="w-7 h-7 text-amber-400 ml-1 drop-shadow-md" />}
-                    </div>
-                    
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-8">
-                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1">
-                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Entries</span>
-                          <strong className="text-2xl text-white font-black">{mod.entryCount}</strong>
-                        </div>
-                        {draftsMap[mod.id] > 0 && (
-                          <div className="bg-indigo-500/10 px-5 py-4 rounded-3xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 animate-pulse">
-                            <span className="text-indigo-400 text-[10px] uppercase tracking-[0.2em] font-black">Drafts</span>
-                            <strong className="text-2xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
+              return (
+                    <motion.div 
+                      key={mod.id}
+                      layout
+                      className={`group bg-zinc-900 rounded-3xl border border-white/5 shadow-xl shadow-black/40 hover:border-blue-500/20 transition-all duration-300 flex flex-col overflow-hidden relative transform-gpu ${isTopRank ? 'ring-2 ring-blue-500/50 ring-offset-4 ring-offset-black' : ''}`}
+                    >
+                      
+                      {/* Compact Header (Clickable) */}
+                      <div 
+                        className="p-4 sm:p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-800/30 transition-all select-none w-full text-left"
+                        onClick={() => setExpandedModId(isExpanded ? null : mod.id)}
+                      >
+                    <motion.div 
+                      layout="position"
+                      className="flex items-center gap-3 sm:gap-4 overflow-hidden pr-2"
+                    >
+                        {sortMode === 'ranking' ? (
+                          <span className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${isTopRank ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-zinc-800 text-zinc-500'}`}>
+                            #{index + 1}
+                          </span>
+                        ) : (
+                          <div className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
+                            <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
                           </div>
                         )}
-                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Points</span>
-                          <strong className="text-2xl text-amber-400 flex items-center gap-2 font-black">
-                            <Trophy className="w-5 h-5 text-amber-500" />
-                            {mod.totalPoints || 0}
-                          </strong>
-                        </div>
-                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">P/E Ratio</span>
-                          <strong className="text-2xl text-purple-400 font-black">
-                            {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
-                          </strong>
-                        </div>
-                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Honor</span>
-                          <strong className="text-2xl text-emerald-400 font-black">
-                            {mod.honorScore ?? 100}
-                          </strong>
-                        </div>
-                        <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1 col-span-full sm:col-span-1">
-                          <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Active Since</span>
-                          <strong className="text-lg text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  {isAdmin && (
-                    <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                      <div className="flex gap-2">
-                         {mod.status === 'blacklisted' ? (
-                            <button 
-                              onClick={() => handleStatusChange(mod.id, 'active')}
-                              className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-emerald-600/30 active:scale-95 shadow-lg"
-                            >
-                              Re-Hire Member
-                            </button>
-                         ) : (
-                            <button 
-                              onClick={() => handleStatusChange(mod.id, 'blacklisted')}
-                              className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-red-600/20 active:scale-95"
-                            >
-                              Move to Blacklist
-                            </button>
-                         )}
-                      </div>
-                      <Link 
-                        to={`/mod/${mod.id}`}
-                        className="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest px-6 py-2.5 bg-blue-400/5 rounded-xl border border-blue-400/10 hover:bg-blue-400/10 transition-all"
-                      >
-                        Control Panel &rarr;
-                      </Link>
-                    </div>
-                  )}
-
-                </div>
-                
-                <div className={`w-full md:w-[32rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
-                  <div className={`flex-1 flex flex-col p-8 ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
-                    {mod.role !== 'officer' && (
-                      <p className={`text-xs uppercase tracking-[0.3em] font-black mb-6 ${mod.status === 'blacklisted' ? 'text-zinc-600' : isCritical ? 'text-red-500' : 'text-zinc-500'} text-center`}>
-                        {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
-                      </p>
-                    )}
-                    <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-4'}`}>
-                      {mod.status === 'blacklisted' ? (
-                        <div className="text-zinc-700 font-mono text-4xl font-black tracking-widest">--:--:--</div>
-                      ) : mod.role === 'officer' ? (
-                        <div className="flex flex-col gap-3 w-full max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
-                           <p className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500 mb-2 px-1">Managed Units</p>
-                           <ol className="space-y-3 text-sm w-full">
-                             {(officerRelationsMap[mod.id] || []).map(m => (
-                               <li key={m.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
-                                   <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-lg transition-colors truncate max-w-[180px]">
-                                     {m.name}
-                                   </Link>
-                                   <div className="flex items-center gap-3 shrink-0">
-                                     <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20" title="Points">
-                                       <Trophy className="w-3.5 h-3.5" />
-                                       {m.totalPoints || 0}
-                                     </div>
-                                     <div className="flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-xl text-xs font-black border border-purple-500/20" title="P/E Ratio">
-                                       P/E {m.entryCount > 0 ? ((m.totalPoints || 0) / m.entryCount).toFixed(1) : '0.0'}
-                                     </div>
-                                     {draftsMap[m.id] > 0 && (
-                                       <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-xl text-xs font-black border border-indigo-500/20 animate-pulse" title="Pending Drafts">
-                                         D {draftsMap[m.id]}
-                                       </div>
-                                     )}
-                                     <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
-                                       <CountdownTimer deadlineAt={m.deadlineAt} compact />
-                                     </span>
-                                   </div>
-                               </li>
-                             ))}
-                           </ol>
-                           {(!officerRelationsMap[mod.id] || officerRelationsMap[mod.id].length === 0) && (
-                              <div className="py-12 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center">
-                                <span className="text-sm text-zinc-600 font-bold uppercase tracking-widest">No Active Units</span>
-                              </div>
+                        <h3 className="font-black text-lg sm:text-2xl text-white truncate tracking-tight">
+                          {mod.name}
+                        </h3>
+                        {isTopRank && <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400 ml-1 drop-shadow-md shrink-0 block" />}
+                    </motion.div>
+                    
+                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                        {/* Quick Stats - hidden when expanded */}
+                        <div className={`flex items-center gap-1.5 sm:gap-2 transition-[max-width,opacity,margin] duration-300 ease-out overflow-hidden ${isExpanded ? 'max-w-0 opacity-0 !m-0 pointer-events-none' : 'max-w-[400px] opacity-100'}`}>
+                           <div className="flex items-center gap-1 sm:gap-2 bg-amber-500/10 text-amber-500 px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-xl text-[10px] sm:text-sm font-black border border-amber-500/20" title="Points">
+                             <Trophy className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                             {mod.totalPoints || 0}
+                           </div>
+                           <div className="flex items-center gap-1 bg-purple-500/10 text-purple-400 px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-xl text-[10px] sm:text-sm font-black border border-purple-500/20" title="P/E Ratio">
+                             <span className="text-purple-500 tracking-tighter">P/E</span> {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(1) : '0.0'}
+                           </div>
+                           {mod.role !== 'officer' && (
+                             <span className="flex items-center gap-1 text-[10px] sm:text-sm bg-zinc-900 px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0 truncate">
+                               <CountdownTimer deadlineAt={mod.deadlineAt} compact />
+                             </span>
                            )}
                         </div>
-                      ) : (
-                        <CountdownTimer deadlineAt={mod.deadlineAt} />
-                      )}
+
+                        <div className="pl-1.5 sm:pl-4 border-l border-white/5 flex items-center">
+                            <ChevronDown className={`w-5 h-5 sm:w-8 sm:h-8 text-zinc-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </div>
                     </div>
                   </div>
+  
+                  {/* Expanded Content Area */}
+                  <motion.div 
+                    layout
+                    initial={false}
+                    animate={isExpanded ? "open" : "closed"}
+                    variants={{
+                      open: {
+                        height: ["0px", "160px", "auto"],
+                        opacity: [0, 0.8, 1],
+                        transition: {
+                          height: {
+                            times: [0, 0.5, 1], // Stage 1 (shutter) takes 50% of the time
+                            duration: 0.7,
+                            ease: [0.33, 1, 0.68, 1] // Snappy shutter ease
+                          },
+                          opacity: { duration: 0.5 }
+                        }
+                      },
+                      closed: {
+                        height: ["auto", "160px", "0px"],
+                        opacity: [1, 0.5, 0],
+                        transition: {
+                          height: { 
+                            times: [0, 0.4, 1],
+                            duration: 0.5, 
+                            ease: [0.32, 0, 0.67, 0] 
+                          },
+                          opacity: { duration: 0.3 }
+                        }
+                      }
+                    }}
+                    className="overflow-hidden no-scrollbar bg-white/[0.02]"
+                    style={{ willChange: "height, opacity" }}
+                  >
+                    <ModCardDetails 
+                      mod={mod}
+                      officerRelationsMap={officerRelationsMap}
+                      draftsMap={draftsMap}
+                      isAdmin={isAdmin}
+                      handleStatusChange={handleStatusChange}
+                      isCritical={isCritical}
+                    />
+                  </motion.div>
+                </motion.div>
+              );
+            };
+
+            if (modRoleView === 'officer') {
+              const groupSymbols = ['.', '-', ':', '#', '$', '+', '/', '?'];
+              const grouped = {} as Record<string, typeof mods>;
+              
+              rankedMods.forEach(mod => {
+                const sym = groupSymbols.find(s => mod.name.includes(s));
+                const key = mod.group || sym || 'Other';
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(mod);
+              });
+
+              return (
+                <div className="flex flex-col gap-12">
+                  {[...groupSymbols, 'Other'].map(key => {
+                    if (!grouped[key] || grouped[key].length === 0) return null;
+                    return (
+                      <div key={key} className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
+                           <span className="text-zinc-500 text-sm font-black uppercase tracking-[0.3em] pl-4 border-l-2 border-zinc-700">Group {key}</span>
+                           <span className="flex-1 h-px bg-white/5"></span>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                          {grouped[key].map(mod => renderCard(mod, rankedMods.indexOf(mod)))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+              );
+            }
+
+            return (
+              <div className="flex flex-col gap-4">
+                {rankedMods.map((mod, index) => renderCard(mod, index))}
               </div>
             );
-          })}
+          })()}
         </div>
       </div>
 
@@ -707,6 +854,22 @@ export function ModList() {
                         required
                       />
                     </div>
+                    {newModRole === 'officer' && (
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Officer Group</label>
+                        <select
+                          className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+                          value={newModGroup}
+                          onChange={(e) => setNewModGroup(e.target.value)}
+                        >
+                          {['Other', '.', '-', ':', '#', '$', '+', '/', '?'].map(group => (
+                            <option key={group} value={group}>
+                              {group === 'Other' ? 'None (Other)' : `Group ${group}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div className="bg-zinc-800/50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-white/5">
                     <button

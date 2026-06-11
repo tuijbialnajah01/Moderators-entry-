@@ -2,21 +2,14 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 export const ModCardSkeleton = () => (
-  <div className="bg-zinc-900 border border-white/5 rounded-[2.5rem] p-8 sm:p-12 overflow-hidden relative">
+  <div className="bg-zinc-900 rounded-3xl border border-white/5 shadow-xl shadow-black/40 overflow-hidden relative">
     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-    <div className="flex flex-col lg:flex-row gap-10 items-center">
-      <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full bg-zinc-800 shrink-0" />
-      <div className="flex-1 w-full space-y-6">
-        <div className="h-12 w-3/4 bg-zinc-800 rounded-2xl" />
-        <div className="flex gap-4">
-          <div className="h-6 w-32 bg-zinc-800 rounded-xl" />
-          <div className="h-6 w-32 bg-zinc-800 rounded-xl" />
-        </div>
+    <div className="p-5 sm:p-6 flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-800 shrink-0" />
+        <div className="h-7 sm:h-8 w-40 sm:w-64 bg-zinc-800 rounded-xl" />
       </div>
-      <div className="flex gap-4 w-full lg:w-auto">
-        <div className="h-20 w-32 bg-zinc-800 rounded-2xl flex-1 lg:flex-none" />
-        <div className="h-20 w-32 bg-zinc-800 rounded-2xl flex-1 lg:flex-none" />
-      </div>
+      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-zinc-800/50 shrink-0" />
     </div>
   </div>
 );
