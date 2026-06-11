@@ -1046,33 +1046,33 @@ export function ModDetail() {
               </p>
               
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Status</span>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-3 h-3 rounded-full ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}></span>
-                    <span className="font-black text-white text-lg sm:text-xl truncate">
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col items-center justify-center aspect-square group hover:border-blue-500/30 transition-all text-center">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-50">Status</span>
+                  <div className="flex flex-col items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full mb-1 ${mod.status === 'blacklisted' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}></span>
+                    <span className="font-black text-white text-3xl sm:text-4xl tracking-tighter uppercase whitespace-nowrap">
                       {mod.status === 'blacklisted' ? 'Offline' : 'Online'}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Data Logs</span>
-                  <span className="font-black text-white text-3xl sm:text-4xl group-hover:text-blue-400 transition-colors">{entries.length}</span>
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col items-center justify-center aspect-square group hover:border-blue-500/30 transition-all text-center">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-50">Data Logs</span>
+                  <span className="font-black text-white text-5xl sm:text-7xl group-hover:text-blue-400 transition-colors tracking-tighter">{entries.length}</span>
                 </div>
 
-                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">P/E Ratio</span>
-                  <span className="font-black text-white text-3xl sm:text-4xl group-hover:text-purple-400 transition-colors">
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col items-center justify-center aspect-square group hover:border-blue-500/30 transition-all text-center">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-50">P/E Ratio</span>
+                  <span className="font-black text-white text-5xl sm:text-7xl group-hover:text-purple-400 transition-colors tracking-tighter">
                     {entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0'}
                   </span>
                 </div>
 
-                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col justify-between aspect-square md:aspect-auto md:h-32 group hover:border-blue-500/30 transition-all">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Honor Score</span>
-                  <div className="flex items-end justify-between">
-                    <span className="font-black text-emerald-400 text-3xl sm:text-4xl">{mod.honorScore ?? 100}</span>
-                    <span className="text-zinc-700 text-[10px] font-black mb-1">/ 100</span>
+                <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-inner flex flex-col items-center justify-center aspect-square group hover:border-blue-500/30 transition-all text-center">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-50">Honor Score</span>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="font-black text-emerald-400 text-5xl sm:text-7xl tracking-tighter">{mod.honorScore ?? 100}</span>
+                    <span className="text-zinc-700 text-sm font-black opacity-40">/100</span>
                   </div>
                 </div>
 
