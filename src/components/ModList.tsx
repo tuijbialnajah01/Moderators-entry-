@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, PageBreak } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, PageBreak, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 
 // No extra declarations needed for functional autoTable
@@ -278,8 +278,8 @@ export function ModList() {
           new Paragraph({ text: "ALL REPORTS", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
           new Paragraph({ text: "" }),
           new Table({
+            layout: TableLayoutType.AUTOFIT,
             width: { size: "100%", type: WidthType.PERCENTAGE },
-            columnWidths: [6000, 4000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -334,8 +334,8 @@ export function ModList() {
           new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
           new Paragraph({ text: "" }),
           new Table({
+            layout: TableLayoutType.AUTOFIT,
             width: { size: "100%", type: WidthType.PERCENTAGE },
-            columnWidths: [1500, 6000, 2500],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -385,8 +385,8 @@ export function ModList() {
           new Paragraph({ children: [new TextRun({ text: `STATUS: ${status}`, bold: true, color: status === 'BLACKLISTED' ? "DC2626" : "059669" })] }),
           new Paragraph({ text: "" }),
           new Table({
+            layout: TableLayoutType.AUTOFIT,
             width: { size: "100%", type: WidthType.PERCENTAGE },
-            columnWidths: [4000, 6000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -410,8 +410,8 @@ export function ModList() {
           children.push(
             new Paragraph({ text: "PENDING DRAFTS", heading: HeadingLevel.HEADING_3 }),
             new Table({
+              layout: TableLayoutType.AUTOFIT,
               width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [3000, 2000, 5000],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -433,8 +433,8 @@ export function ModList() {
           children.push(
             new Paragraph({ text: "ACTIVITY LEDGER", heading: HeadingLevel.HEADING_3 }),
             new Table({
+              layout: TableLayoutType.AUTOFIT,
               width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [3000, 2000, 5000],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -458,8 +458,24 @@ export function ModList() {
       const sortedContentMods = [...modsData].sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
 
       const doc = new Document({
+        styles: {
+          default: {
+            document: {
+              run: { font: "Inter", color: "18181b" },
+            },
+          },
+        },
         sections: [{
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: 720,
+                right: 500,
+                bottom: 720,
+                left: 500,
+              },
+            },
+          },
           children: [
             ...renderIndexSection(),
             ...renderLeaderboardSection('points'),

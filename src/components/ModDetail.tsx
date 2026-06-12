@@ -8,7 +8,7 @@ import { CountdownTimer } from './CountdownTimer';
 import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw, ExternalLink } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 
 // No extra declarations needed for functional autoTable
@@ -249,8 +249,24 @@ export function ModDetail() {
       const status = (mod.status || 'ACTIVE').toUpperCase();
       
       const doc = new Document({
+        styles: {
+          default: {
+            document: {
+              run: { font: "Inter", color: "18181b" },
+            },
+          },
+        },
         sections: [{
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: 720,
+                right: 500,
+                bottom: 720,
+                left: 500,
+              },
+            },
+          },
           children: [
             new Paragraph({
               text: mod.name.toUpperCase(),
@@ -281,8 +297,8 @@ export function ModDetail() {
             }),
             new Paragraph({ text: "" }),
             new Table({
+              layout: TableLayoutType.AUTOFIT,
               width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [4000, 6000],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -331,8 +347,8 @@ export function ModDetail() {
               heading: HeadingLevel.HEADING_3,
             }),
             new Table({
+              layout: TableLayoutType.AUTOFIT,
               width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [3000, 2000, 5000],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
