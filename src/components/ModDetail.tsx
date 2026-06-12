@@ -298,8 +298,8 @@ export function ModDetail() {
             new Paragraph({ text: "" }),
             new Table({
               layout: TableLayoutType.FIXED,
-              width: { size: 9000, type: WidthType.DXA },
-              columnWidths: [4500, 4500],
+              width: { size: 10000, type: WidthType.DXA },
+              columnWidths: [5000, 5000],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
                 bottom: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -349,8 +349,8 @@ export function ModDetail() {
             }),
             new Table({
               layout: TableLayoutType.FIXED,
-              width: { size: 9000, type: WidthType.DXA },
-              columnWidths: [1800, 1000, 6200],
+              width: { size: 10000, type: WidthType.DXA },
+              columnWidths: [2000, 1500, 6500],
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },

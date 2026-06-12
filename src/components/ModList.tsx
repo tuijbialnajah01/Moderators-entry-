@@ -279,8 +279,8 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 9000, type: WidthType.DXA },
-            columnWidths: [6000, 3000],
+            width: { size: 10000, type: WidthType.DXA },
+            columnWidths: [7000, 3000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
               bottom: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -336,8 +336,8 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 9000, type: WidthType.DXA },
-            columnWidths: [1500, 5000, 2500],
+            width: { size: 10000, type: WidthType.DXA },
+            columnWidths: [1500, 5500, 3000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
               bottom: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -388,8 +388,8 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 9000, type: WidthType.DXA },
-            columnWidths: [4500, 4500],
+            width: { size: 10000, type: WidthType.DXA },
+            columnWidths: [5000, 5000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
               bottom: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
