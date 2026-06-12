@@ -185,6 +185,20 @@ export function ModList() {
   const [termsRoleView, setTermsRoleView] = useState<'moderator' | 'officer'>('moderator');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [expandedModId, setExpandedModId] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Basic offline/online detection
+    const handleOnline = () => setOffline(false);
+    const handleOffline = () => setOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     // Regular users can only see active mods.
@@ -202,8 +216,10 @@ export function ModList() {
         });
         setMods(fetchedMods);
         setLoading(false);
+        setConnectionError(null);
       },
       (error) => {
+        setConnectionError("Could not reach the database. Please check your internet connection.");
         handleFirestoreError(error, OperationType.LIST, 'mods');
         setLoading(false);
       }
@@ -279,7 +295,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 10000, type: WidthType.DXA },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [7000, 3000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -292,14 +308,14 @@ export function ModList() {
             rows: [
               new TableRow({
                 children: [
-                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "MEMBER NAME", bold: true, color: "18181B" })] })] }),
-                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "DESIGNATION", bold: true, color: "18181B" })] })] }),
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "MEMBER NAME", bold: true, color: "18181B", size: 18 })] })] }),
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DESIGNATION", bold: true, color: "18181B", size: 18 })] })] }),
                 ]
               }),
               ...sortedMods.map((d, i) => new TableRow({
                 children: [
-                  new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: d.mod.name.toUpperCase(), style: "Strong" })] }),
-                  new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
+                  new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: d.mod.name.toUpperCase(), bold: true, size: 18 })] })] }),
+                  new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (d.mod.role?.toUpperCase() || 'MODERATOR'), size: 18 })] })] }),
                 ]
               }))
             ]
@@ -336,7 +352,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 10000, type: WidthType.DXA },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [1500, 5500, 3000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -349,9 +365,9 @@ export function ModList() {
             rows: [
               new TableRow({
                 children: [
-                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "RANK", bold: true, color: "475569" })] })] }),
-                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "MEMBER", bold: true, color: "475569" })] })] }),
-                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: headLabel, bold: true, color: "475569" })] })] }),
+                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "RANK", bold: true, color: "475569", size: 18 })] })] }),
+                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "MEMBER", bold: true, color: "475569", size: 18 })] })] }),
+                  new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: headLabel, bold: true, color: "475569", size: 18 })] })] }),
                 ]
               }),
               ...sortedMods.map((d, i) => {
@@ -361,9 +377,9 @@ export function ModList() {
                 if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
                 return new TableRow({
                   children: [
-                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${i + 1}`, style: "Strong" })] }),
-                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: d.mod.name.toUpperCase(), style: "Strong" })] }),
-                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: val, color: "059669", bold: true })] })] }),
+                    new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${i + 1}`, bold: true, size: 18 })] })] }),
+                    new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: d.mod.name.toUpperCase(), bold: true, size: 18 })] })] }),
+                    new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: val, color: "059669", bold: true, size: 18 })] })] }),
                   ]
                 });
               })
@@ -388,7 +404,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.FIXED,
-            width: { size: 10000, type: WidthType.DXA },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [5000, 5000],
             borders: {
               top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
@@ -399,11 +415,11 @@ export function ModList() {
               insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
             },
             rows: [
-              new TableRow({ children: [new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "PERFORMANCE METRIC", bold: true, color: "334155" })] })] }), new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "CERTIFIED VALUE", bold: true, color: "334155" })] })] })] }),
-              new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Accumulated Merit Points" })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })] })] }),
-              new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Verified Activity Logs" })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })] })] }),
-              new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Efficiency Ratio (P/E)" })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })] })] }),
-              new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Social Honor Standing" })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })] })] }),
+              new TableRow({ children: [new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PERFORMANCE METRIC", bold: true, color: "334155", size: 18 })] })] }), new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "CERTIFIED VALUE", bold: true, color: "334155", size: 18 })] })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Accumulated Merit Points", size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${mod.totalPoints || 0}`, bold: true, size: 18 })] })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Verified Activity Logs", size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${entries.length}`, bold: true, size: 18 })] })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Efficiency Ratio (P/E)", size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${peRatio}`, bold: true, size: 18 })] })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Social Honor Standing", size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${mod.honorScore ?? 100} / 100`, bold: true, size: 18 })] })] })] }),
             ],
           }),
           new Paragraph({ text: "" }),
@@ -426,8 +442,8 @@ export function ModList() {
                 insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" },
               },
               rows: [
-                new TableRow({ children: [new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "475569" })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "475569" })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "DRAFT SPECIFICATIONS", bold: true, color: "475569" })] })] })] }),
-                ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: new Date(d.createdAt).toLocaleDateString() })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: `+${d.points || 0}`, color: "059669", bold: true })] })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: d.text || "Detail" })] })] }))
+                new TableRow({ children: [new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DATE", bold: true, color: "475569", size: 18 })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PTS", bold: true, color: "475569", size: 18 })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DRAFT SPECIFICATIONS", bold: true, color: "475569", size: 18 })] })] })] }),
+                ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: new Date(d.createdAt).toLocaleDateString(), size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `+${d.points || 0}`, color: "059669", bold: true, size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (d.text || "Detail"), size: 18 })] })] })] }))
               ]
             }),
             new Paragraph({ text: "" })
@@ -450,8 +466,8 @@ export function ModList() {
                 insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" },
               },
               rows: [
-                new TableRow({ children: [new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "475569" })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "475569" })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "LOG DETAILS", bold: true, color: "475569" })] })] })] }),
-                ...entries.map((e: any) => new TableRow({ children: [new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: `+${e.points || 0}`, color: "059669", bold: true })] })] }), new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: e.text || "Detail" })] })] }))
+                new TableRow({ children: [new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DATE", bold: true, color: "475569", size: 18 })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PTS", bold: true, color: "475569", size: 18 })] })] }), new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "LOG DETAILS", bold: true, color: "475569", size: 18 })] })] })] }),
+                ...entries.map((e: any) => new TableRow({ children: [new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: new Date(e.createdAt).toLocaleDateString(), size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `+${e.points || 0}`, color: "059669", bold: true, size: 18 })] })] }), new TableCell({ margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (e.text || "Detail"), size: 18 })] })] })] }))
               ]
             }),
             new Paragraph({ text: "" })
@@ -796,6 +812,24 @@ export function ModList() {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto w-full p-4 sm:p-10">
+        {(offline || connectionError) && (
+          <div className="w-full max-w-6xl mx-auto mb-6">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 flex items-center gap-4 text-red-500">
+              <AlertTriangle className="w-8 h-8 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-lg">{offline ? 'You are offline' : 'Connection Error'}</h3>
+                <p className="text-sm opacity-80">{connectionError || 'Restoring connection...'}</p>
+              </div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="ml-auto px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-sm font-bold transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 mb-8">
           <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2.5rem] w-full shadow-xl shadow-black/40">
              <button
