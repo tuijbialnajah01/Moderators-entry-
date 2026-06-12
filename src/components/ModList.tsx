@@ -280,7 +280,8 @@ export function ModList() {
             new Paragraph({ text: "MASTER DIRECTORY", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
             new Paragraph({ text: "" }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [1000, 4000, 3000, 2000],
               rows: [
                 new TableRow({
                   children: [
@@ -333,7 +334,8 @@ export function ModList() {
             new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
             new Paragraph({ text: "" }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [1000, 3000, 3000, 3000],
               rows: [
                 new TableRow({
                   children: [
@@ -378,7 +380,8 @@ export function ModList() {
           new Paragraph({ children: [new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })] }),
           new Paragraph({ text: "" }),
           new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+            width: { size: "100%", type: WidthType.PERCENTAGE },
+            columnWidths: [4000, 6000],
             rows: [
               new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "METRIC", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: "VALUE", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Accumulated Merit" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
@@ -394,7 +397,8 @@ export function ModList() {
           children.push(
             new Paragraph({ text: "PENDING DRAFTS", heading: HeadingLevel.HEADING_3 }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [3000, 2000, 5000],
               rows: [
                 new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "DRAFT DETAILS", style: "Strong" })] })] }),
                 ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(d.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${d.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: d.text || "Detail" })] })] }))
@@ -408,7 +412,8 @@ export function ModList() {
           children.push(
             new Paragraph({ text: "ACTIVITY LEDGER", heading: HeadingLevel.HEADING_3 }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [3000, 2000, 5000],
               rows: [
                 new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "LOG DETAILS", style: "Strong" })] })] }),
                 ...entries.map((e: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${e.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: e.text || "Detail" })] })] }))

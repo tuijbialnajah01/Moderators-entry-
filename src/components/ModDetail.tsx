@@ -285,7 +285,8 @@ export function ModDetail() {
             }),
             new Paragraph({ text: "" }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [4000, 6000],
               rows: [
                 new TableRow({
                   children: [
@@ -326,7 +327,8 @@ export function ModDetail() {
               heading: HeadingLevel.HEADING_3,
             }),
             new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: "100%", type: WidthType.PERCENTAGE },
+              columnWidths: [3000, 2000, 5000],
               rows: [
                 new TableRow({
                   children: [
