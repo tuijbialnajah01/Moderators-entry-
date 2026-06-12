@@ -274,35 +274,36 @@ export function ModList() {
 
       const renderIndexSection = () => {
         const sortedMods = [...modsData].sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
-        return {
-          properties: {},
-          children: [
-            new Paragraph({ text: "MASTER DIRECTORY", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-            new Paragraph({ text: "" }),
-            new Table({
-              width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [1000, 4000, 3000, 2000],
-              rows: [
-                new TableRow({
-                  children: [
-                    new TableCell({ children: [new Paragraph({ text: "NO.", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: "NAME", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: "POSITION", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: "SCORE", style: "Strong" })] }),
-                  ]
-                }),
-                ...sortedMods.map((d, i) => new TableRow({
-                  children: [
-                    new TableCell({ children: [new Paragraph({ text: `${i + 1}` })] }),
-                    new TableCell({ children: [new Paragraph({ text: d.mod.name })] }),
-                    new TableCell({ children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
-                    new TableCell({ children: [new Paragraph({ text: `${d.mod.totalPoints || 0}` })] }),
-                  ]
-                }))
-              ]
-            })
-          ]
-        };
+        return [
+          new Paragraph({ text: "ALL REPORTS", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({
+            width: { size: "100%", type: WidthType.PERCENTAGE },
+            columnWidths: [6000, 4000],
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "NAME", bold: true, color: "52525B" })] })] }),
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "POSITION", bold: true, color: "52525B" })] })] }),
+                ]
+              }),
+              ...sortedMods.map((d, i) => new TableRow({
+                children: [
+                  new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: d.mod.name, style: "Strong" })] }),
+                  new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
+                ]
+              }))
+            ]
+          })
+        ];
       };
 
       const renderLeaderboardSection = (type: 'points' | 'pe' | 'honor') => {
@@ -328,41 +329,45 @@ export function ModList() {
           sortedMods.sort((a,b) => (b.mod.honorScore ?? 100) - (a.mod.honorScore ?? 100));
         }
 
-        return {
-          properties: { type: "nextPage" as any },
-          children: [
-            new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
-            new Paragraph({ text: "" }),
-            new Table({
-              width: { size: "100%", type: WidthType.PERCENTAGE },
-              columnWidths: [1000, 3000, 3000, 3000],
-              rows: [
-                new TableRow({
+        return [
+          new Paragraph({ children: [new PageBreak()] }),
+          new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({
+            width: { size: "100%", type: WidthType.PERCENTAGE },
+            columnWidths: [1500, 6000, 2500],
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "RANK", bold: true, color: "52525B" })] })] }),
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "NAME", bold: true, color: "52525B" })] })] }),
+                  new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: headLabel, bold: true, color: "52525B" })] })] }),
+                ]
+              }),
+              ...sortedMods.map((d, i) => {
+                let val = '';
+                if (type === 'points') val = `${d.mod.totalPoints || 0}`;
+                if (type === 'pe') val = `${d.entries.length > 0 ? ((d.mod.totalPoints || 0) / d.entries.length).toFixed(1) : '0.0'}`;
+                if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
+                return new TableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph({ text: "RANK", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: "NAME", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: "POSITION", style: "Strong" })] }),
-                    new TableCell({ children: [new Paragraph({ text: headLabel, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${i + 1}`, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: d.mod.name, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: val, color: "059669", bold: true })] })] }),
                   ]
-                }),
-                ...sortedMods.map((d, i) => {
-                  let val = '';
-                  if (type === 'points') val = `${d.mod.totalPoints || 0}`;
-                  if (type === 'pe') val = `${d.entries.length > 0 ? ((d.mod.totalPoints || 0) / d.entries.length).toFixed(1) : '0.0'}`;
-                  if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
-                  return new TableRow({
-                    children: [
-                      new TableCell({ children: [new Paragraph({ text: `${i + 1}` })] }),
-                      new TableCell({ children: [new Paragraph({ text: d.mod.name })] }),
-                      new TableCell({ children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
-                      new TableCell({ children: [new Paragraph({ text: val })] }),
-                    ]
-                  });
-                })
-              ]
-            })
-          ]
-        };
+                });
+              })
+            ]
+          })
+        ];
       };
 
       const renderModSection = (data: any) => {
@@ -371,23 +376,31 @@ export function ModList() {
         const status = (mod.status || 'ACTIVE').toUpperCase();
         
         const children = [
-          new Paragraph({ text: "ANALYTICS REPORT", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new PageBreak()] }),
+          new Paragraph({ text: mod.name.toUpperCase(), heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
           new Paragraph({ children: [new TextRun({ text: `ID: ${mod.id?.slice(-10).toUpperCase()}`, bold: true })] }),
           new Paragraph({ children: [new TextRun({ text: `GENERATED: ${new Date().toLocaleString().toUpperCase()}` })] }),
-          new Paragraph({ children: [new TextRun({ text: `STATUS: ${status}`, bold: true, color: status === 'BLACKLISTED' ? "DC2626" : "059669" })], alignment: AlignmentType.RIGHT }),
-          new Paragraph({ text: "" }),
-          new Paragraph({ text: mod.name, heading: HeadingLevel.HEADING_2 }),
-          new Paragraph({ children: [new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })] }),
+          new Paragraph({ children: [new TextRun({ text: `STATUS: ${status}`, bold: true, color: status === 'BLACKLISTED' ? "DC2626" : "059669" })] }),
           new Paragraph({ text: "" }),
           new Table({
             width: { size: "100%", type: WidthType.PERCENTAGE },
             columnWidths: [4000, 6000],
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+            },
             rows: [
-              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "METRIC", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: "VALUE", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
-              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Accumulated Merit" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
-              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Data Logs Submitted" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
-              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Performance/Entry Ratio" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
-              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Honor Standing" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } })] }),
+              new TableRow({ children: [new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "METRIC", bold: true, color: "52525B" })] })] }), new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "VALUE", bold: true, color: "52525B" })] })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Accumulated Merit" })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Data Logs Submitted" })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Performance/Entry Ratio" })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })] })] }),
+              new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Honor Standing" })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })] })] }),
             ],
           }),
           new Paragraph({ text: "" })
@@ -399,9 +412,17 @@ export function ModList() {
             new Table({
               width: { size: "100%", type: WidthType.PERCENTAGE },
               columnWidths: [3000, 2000, 5000],
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              },
               rows: [
-                new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "DRAFT DETAILS", style: "Strong" })] })] }),
-                ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(d.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${d.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: d.text || "Detail" })] })] }))
+                new TableRow({ children: [new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "52525B" })] })] }), new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "52525B" })] })] }), new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "DRAFT DETAILS", bold: true, color: "52525B" })] })] })] }),
+                ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: new Date(d.createdAt).toLocaleDateString() })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: `+${d.points || 0}`, color: "059669", bold: true })] })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: d.text || "Detail" })] })] }))
               ]
             }),
             new Paragraph({ text: "" })
@@ -414,35 +435,43 @@ export function ModList() {
             new Table({
               width: { size: "100%", type: WidthType.PERCENTAGE },
               columnWidths: [3000, 2000, 5000],
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+              },
               rows: [
-                new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "LOG DETAILS", style: "Strong" })] })] }),
-                ...entries.map((e: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${e.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: e.text || "Detail" })] })] }))
+                new TableRow({ children: [new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "52525B" })] })] }), new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "52525B" })] })] }), new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "LOG DETAILS", bold: true, color: "52525B" })] })] })] }),
+                ...entries.map((e: any) => new TableRow({ children: [new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: `+${e.points || 0}`, color: "059669", bold: true })] })] }), new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: e.text || "Detail" })] })] }))
               ]
             }),
             new Paragraph({ text: "" })
           );
         }
 
-        return {
-          properties: { type: "nextPage" as any },
-          children
-        };
+        return children;
       };
 
       const sortedContentMods = [...modsData].sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
 
       const doc = new Document({
-        sections: [
-          renderIndexSection(),
-          renderLeaderboardSection('points'),
-          renderLeaderboardSection('pe'),
-          renderLeaderboardSection('honor'),
-          ...sortedContentMods.map(d => renderModSection(d))
-        ]
+        sections: [{
+          properties: {},
+          children: [
+            ...renderIndexSection(),
+            ...renderLeaderboardSection('points'),
+            ...renderLeaderboardSection('pe'),
+            ...renderLeaderboardSection('honor'),
+            ...sortedContentMods.flatMap(d => renderModSection(d))
+          ]
+        }]
       });
 
       const blob = await Packer.toBlob(doc);
-      saveAs(blob, 'Master_Directory_Report.docx');
+      saveAs(blob, 'All_Reports.docx');
 
     } catch (e) {
       console.error(e);
@@ -731,7 +760,7 @@ export function ModList() {
                         className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 mt-4 px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full disabled:opacity-50"
                       >
                         <Download className="w-10 h-10 sm:w-12 sm:h-12" />
-                        <span>{isGeneratingPDF ? 'Compiling...' : 'Master Directory DOCX'}</span>
+                        <span>{isGeneratingPDF ? 'Compiling...' : 'All Reports DOCX'}</span>
                       </button>
                     </div>
                   )}
