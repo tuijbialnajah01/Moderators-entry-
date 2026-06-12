@@ -249,14 +249,15 @@ export function ModDetail() {
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
       
-      // Premium Palette
+      // Elite / Clean Palette
       const colors = {
-        primary: [15, 23, 42] as [number, number, number], // Slate 900
-        accent: [59, 130, 246] as [number, number, number], // Blue 500
-        gold: [217, 119, 6] as [number, number, number],   // Amber 600
-        text: [51, 65, 85] as [number, number, number],    // Slate 700
-        muted: [148, 163, 184] as [number, number, number], // Slate 400
-        border: [241, 245, 249] as [number, number, number] // Slate 100
+        bg: [250, 250, 250] as [number, number, number],
+        primary: [10, 10, 10] as [number, number, number],      // Black
+        secondary: [113, 113, 122] as [number, number, number],   // Zinc-500
+        accent: [37, 99, 235] as [number, number, number],       // Blue-600
+        danger: [220, 38, 38] as [number, number, number],       // Red-600
+        success: [5, 150, 105] as [number, number, number],      // Emerald-600
+        border: [228, 228, 231] as [number, number, number]      // Zinc-200
       };
 
       const safeText = (text: string) => {
@@ -265,155 +266,163 @@ export function ModDetail() {
           .normalize("NFKD")
           .replace(/[^\x20-\xFF\s]/g, "")
           .replace(/\s+/g, " ")
-          .trim() || "Unit Detail";
+          .trim() || "Detail";
       };
 
-      // Header Branding
+      // Full Page Background 
+      // (Optional soft background, but let's keep it pristine white for print)
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+      // Top minimalist border
       doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.rect(0, 0, pageWidth, 60, 'F');
-      
-      // Decorative header element
+      doc.rect(0, 0, pageWidth, 8, 'F');
+
+      // Accent Line
       doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-      doc.rect(0, 58, pageWidth, 2, 'F');
+      doc.rect(0, 8, pageWidth, 1.5, 'F');
 
-      // Header Text
-      doc.setTextColor(255, 255, 255);
+      // Title & Header 
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(26);
-      doc.text('PERFORMANCE ANALYTICS REPORT', 14, 28);
+      doc.setFontSize(28);
+      doc.text('ANALYTICS REPORT', 16, 34);
       
-      doc.setFontSize(10);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      doc.text(`ID: ${mod.id?.slice(-10).toUpperCase()}`, 16, 42);
+      
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(colors.muted[0], colors.muted[1], colors.muted[2]);
-      doc.text(`SYSTEM REGISTRY: NO.${mod.id?.slice(-8).toUpperCase()}`, 14, 38);
-      doc.text(`DATE GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 14, 44);
+      doc.text(`GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 16, 47);
 
-      // Status Badge
+      // Status Text (No button-like backgrounds)
       const status = (mod.status || 'ACTIVE').toUpperCase();
       const isBlacklisted = status === 'BLACKLISTED';
-      doc.setFillColor(isBlacklisted ? 220 : 30, isBlacklisted ? 38 : 130, isBlacklisted ? 38 : 50);
-      doc.roundedRect(pageWidth - 55, 20, 41, 10, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.text(status, pageWidth - 34.5, 26.5, { align: 'center' });
-
-      // Profile Section
-      let currentY = 85;
-      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.setFontSize(32);
       doc.setFont('helvetica', 'bold');
-      doc.text(safeText(mod.name), 14, currentY);
+      doc.setFontSize(10);
+      if (isBlacklisted) {
+        doc.setTextColor(colors.danger[0], colors.danger[1], colors.danger[2]);
+      } else {
+        doc.setTextColor(colors.success[0], colors.success[1], colors.success[2]);
+      }
+      doc.text(`STATUS: ${status}`, pageWidth - 16, 34, { align: 'right' });
+
+      // Divider
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.setLineWidth(0.5);
+      doc.line(16, 55, pageWidth - 16, 55);
+
+      // Subject Profile
+      let currentY = 75;
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.setFontSize(36);
+      doc.setFont('helvetica', 'bold');
+      doc.text(safeText(mod.name), 16, currentY);
       
-      currentY += 10;
-      doc.setFontSize(14);
+      currentY += 8;
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-      doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 14, currentY);
+      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 16, currentY);
 
-      currentY += 15;
+      currentY += 20;
 
-      // Stats Summary
-      const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(2) : '0.00';
+      // Stats Area - Clean layout
+      const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0';
       
       autoTable(doc, {
         startY: currentY,
-        head: [['ANALYTICAL KPI', 'QUANTIFIED DATA']],
+        head: [['METRIC', 'VALUE']],
         body: [
-          ['Total Performance Accumulation', `${mod.totalPoints || 0} POINTS`],
-          ['Aggregate Data Logs Processed', `${entries.length} ENTRIES`],
-          ['Performance-to-Entry Coefficient', `${peRatio} P/E`],
-          ['Subject Honor Standing', `${mod.honorScore ?? 100} / 100`],
-          ['Communication Registry ID', mod.phoneNumber || 'UNLINKED']
+          ['Accumulated Merit', `${mod.totalPoints || 0}`],
+          ['Data Logs Submitted', `${entries.length}`],
+          ['Performance/Entry Ratio', `${peRatio}`],
+          ['Honor Standing', `${mod.honorScore ?? 100} / 100`],
+          ['Contact Registry', mod.phoneNumber || 'Unlinked']
         ],
-        theme: 'striped',
+        theme: 'plain',
         headStyles: { 
-          fillColor: colors.primary, 
-          textColor: [255, 255, 255], 
-          fontSize: 10, 
+          textColor: colors.secondary, 
+          fontSize: 9, 
           fontStyle: 'bold', 
-          cellPadding: 6 
+          cellPadding: { top: 4, bottom: 4, left: 0, right: 0 }
         },
         styles: { 
-          fontSize: 10, 
-          cellPadding: 6, 
+          fontSize: 11, 
+          cellPadding: { top: 6, bottom: 6, left: 0, right: 0 }, 
           font: 'helvetica',
-          textColor: colors.text
+          textColor: colors.primary
         },
         columnStyles: {
-          1: { halign: 'right', fontStyle: 'bold', textColor: colors.primary }
+          0: { cellWidth: 100 },
+          1: { fontStyle: 'bold' }
         },
-        margin: { left: 14, right: 14 }
+        margin: { left: 16, right: 16 },
+        didDrawCell: (data) => {
+          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+          doc.setLineWidth(0.1);
+          // Only draw a line at the bottom of the cell
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 25;
+      currentY = (doc as any).lastAutoTable.finalY + 30;
 
       // Activity Feed Section Header
-      doc.setFontSize(18);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.text('CHRONOLOGICAL ACTIVITY LEDGER', 14, currentY);
+      doc.text('ACTIVITY LEDGER', 16, currentY);
       
-      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-      doc.line(14, currentY + 3, pageWidth - 14, currentY + 3);
-
       const entryRows = entries.map((e, idx) => [
-        `ID-${entries.length - idx}`,
+        `NO.${entries.length - idx}`,
         new Date(e.createdAt).toLocaleDateString(),
-        `+${e.points || 0} PTS`,
+        `+${e.points || 0}`,
         safeText(e.text)
       ]);
 
       autoTable(doc, {
-        startY: currentY + 10,
-        head: [['LOG ID', 'DATE', 'POINTS', 'DESCRIPTION & LOGS DETAIL']],
+        startY: currentY + 6,
+        head: [['ID', 'DATE', 'PTS', 'LOG DETAILS']],
         body: entryRows,
-        theme: 'grid',
+        theme: 'plain',
         headStyles: { 
-          fillColor: [248, 250, 252], 
-          textColor: colors.primary, 
+          textColor: colors.secondary, 
           fontStyle: 'bold', 
-          fontSize: 9,
-          lineWidth: 0.1,
-          lineColor: colors.border
+          fontSize: 8,
+          cellPadding: { top: 4, bottom: 4, left: 0, right: 0 }
         },
         styles: { 
           fontSize: 9, 
-          cellPadding: 6, 
+          cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, 
           font: 'helvetica',
-          valign: 'middle',
-          overflow: 'linebreak'
+          valign: 'top',
+          overflow: 'linebreak',
+          textColor: colors.primary
         },
         columnStyles: {
-          0: { cellWidth: 22, fontStyle: 'bold', textColor: colors.muted },
-          1: { cellWidth: 28 },
-          2: { cellWidth: 18, fontStyle: 'bold', halign: 'center', textColor: colors.gold },
-          3: { cellWidth: 'auto', textColor: colors.text }
+          0: { cellWidth: 20, fontStyle: 'bold', textColor: colors.secondary },
+          1: { cellWidth: 24, textColor: colors.secondary },
+          2: { cellWidth: 16, fontStyle: 'bold', textColor: colors.success },
+          3: { cellWidth: 'auto' }
+        },
+        margin: { left: 16, right: 16 },
+        didDrawCell: (data) => {
+          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+          doc.setLineWidth(0.1);
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
         },
         didDrawPage: (data) => {
           doc.setFontSize(8);
-          doc.setTextColor(colors.muted[0], colors.muted[1], colors.muted[2]);
-          doc.text(`Confidential Performance Audit • Page ${data.pageNumber}`, 14, pageHeight - 10);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+          doc.text(`PAGE ${data.pageNumber}`, 16, pageHeight - 12);
+          doc.text(`${safeText(mod.name).toUpperCase()} • CONFIDENTIAL`, pageWidth - 16, pageHeight - 12, { align: 'right' });
         }
       });
 
-      // Page Header Polish
-      const totalPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        if (i > 1) {
-          doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-          doc.rect(0, 0, pageWidth, 15, 'F');
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(8);
-          doc.text(`OFFICIAL PERFORMANCE DOSSIER • ${safeText(mod.name).toUpperCase()} • PAGE ${i} OF ${totalPages}`, 14, 10);
-        } else {
-          doc.setFontSize(8);
-          doc.setTextColor(255, 255, 255);
-          doc.text(`PAGE ${i} OF ${totalPages}`, pageWidth - 30, 10);
-        }
-      }
-
-      doc.save(`Audit_Log_${safeText(mod.name).replace(/\s+/g, '_')}.pdf`);
+      doc.save(`${safeText(mod.name).replace(/\s+/g, '_')}_Analytics.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
       alert('Error generating PDF. Some characters may not be compatible.');
@@ -1554,6 +1563,13 @@ export function ModDetail() {
           </div>
         </div>
       )}
+
+      {/* Background Cache for Evidence URLs */}
+      <div className="hidden" aria-hidden="true">
+        {honorLogs.map((log) => 
+          log.evidenceUrl && <link key={`prefetch-${log.id}`} rel="prefetch" href={log.evidenceUrl} as="document" />
+        )}
+      </div>
 
       {/* Evidence Preview Modal */}
       <AnimatePresence>
