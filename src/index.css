@@ -59,42 +59,53 @@ body {
   background: rgba(24, 24, 27, 0.45);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 .glass-panel {
   background: rgba(24, 24, 27, 0.65);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 48px 0 rgba(0, 0, 0, 0.6);
 }
 
 .glass-neon {
-  background: rgba(185, 28, 28, 0.15); /* Red tint */
+  background: rgba(185, 28, 28, 0.2); 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.2), inset 0 0 10px rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 30px rgba(220, 38, 38, 0.25), inset 0 0 15px rgba(220, 38, 38, 0.15);
 }
 
-/* Global transparent overrides for existing tailwind classes to achieve the "Ache Ache Designs" */
+.glass-blue {
+  background: rgba(37, 99, 235, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.2), inset 0 0 15px rgba(59, 130, 246, 0.1);
+}
+
+/* Global transparent overrides */
 .bg-zinc-900 {
-  background: rgba(24, 24, 27, 0.55) !important;
+  background: rgba(15, 15, 18, 0.6) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .bg-zinc-800 {
-  background: rgba(39, 39, 42, 0.45) !important;
+  background: rgba(24, 24, 27, 0.5) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .bg-black {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.65) !important;
   backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
 }
 
 /* Custom Scrollbar Styles */

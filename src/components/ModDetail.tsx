@@ -297,45 +297,46 @@ export function ModDetail() {
             }),
             new Paragraph({ text: "" }),
             new Table({
-              layout: TableLayoutType.AUTOFIT,
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              layout: TableLayoutType.FIXED,
+              width: { size: 9000, type: WidthType.DXA },
+              columnWidths: [4500, 4500],
               borders: {
-                top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                top: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
+                bottom: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 2, color: "000000" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
               },
               rows: [
                 new TableRow({
                   children: [
-                    new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "METRIC", bold: true, color: "52525B" })] })] }),
-                    new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "VALUE", bold: true, color: "52525B" })] })] }),
+                    new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "PERFORMANCE METRIC", bold: true, color: "334155" })] })] }),
+                    new TableCell({ shading: { fill: "F1F5F9" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "CERTIFIED VALUE", bold: true, color: "334155" })] })] }),
                   ],
                 }),
                 new TableRow({
                   children: [
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Accumulated Merit" })] }),
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Accumulated Merit Points" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })] }),
                   ],
                 }),
                 new TableRow({
                   children: [
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Data Logs Submitted" })] }),
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Verified Activity Logs" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })] }),
                   ],
                 }),
                 new TableRow({
                   children: [
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Performance/Entry Ratio" })] }),
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Efficiency Ratio (P/E)" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })] }),
                   ],
                 }),
                 new TableRow({
                   children: [
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: "Honor Standing" })] }),
-                    new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: "Social Honor Standing" })] }),
+                    new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })] }),
                   ],
                 }),
               ],
@@ -343,34 +344,35 @@ export function ModDetail() {
             new Paragraph({ text: "" }),
             new Paragraph({ text: "" }),
             new Paragraph({
-              text: "ACTIVITY LEDGER",
+              text: "ACTIVITY AUDIT LEDGER",
               heading: HeadingLevel.HEADING_3,
             }),
             new Table({
-              layout: TableLayoutType.AUTOFIT,
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              layout: TableLayoutType.FIXED,
+              width: { size: 9000, type: WidthType.DXA },
+              columnWidths: [1800, 1000, 6200],
               borders: {
-                top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
-                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" },
               },
               rows: [
                 new TableRow({
                   children: [
-                    new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "52525B" })] })] }),
-                    new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "52525B" })] })] }),
-                    new TableCell({ shading: { fill: "F4F4F5" }, margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: "LOG DETAILS", bold: true, color: "52525B" })] })] }),
+                    new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "DATE", bold: true, color: "475569" })] })] }),
+                    new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "PTS", bold: true, color: "475569" })] })] }),
+                    new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "LOG DETAILS", bold: true, color: "475569" })] })] }),
                   ],
                 }),
                 ...entries.map(e => 
                   new TableRow({
                     children: [
-                      new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }),
-                      new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: `+${e.points || 0}`, color: "059669", bold: true })] })] }),
-                      new TableCell({ margins: { top: 100, bottom: 100, left: 100, right: 100 }, children: [new Paragraph({ text: e.text || "Detail" })] }),
+                      new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }),
+                      new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: `+${e.points || 0}`, color: "059669", bold: true })] })] }),
+                      new TableCell({ margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ text: e.text || "Detail" })] }),
                     ],
                   })
                 )
