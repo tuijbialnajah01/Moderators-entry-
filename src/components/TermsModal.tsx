@@ -301,12 +301,14 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                                   <tr className="hover:bg-white/5 transition-colors border-b border-white/5">
                                     <td className="px-6 py-5">
                                       <p className="text-zinc-200 font-bold">Innovation Project</p>
+                                      <p className="text-sm text-red-500 font-bold mt-1">Exclusively restricted to groups and communities.</p>
                                     </td>
                                     <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">30 - 100</td>
                                   </tr>
                                   <tr className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-5">
                                       <p className="text-zinc-200 font-bold">Collaborative Development</p>
+                                      <p className="text-sm text-red-500 font-bold mt-1">Exclusively restricted to groups and communities.</p>
                                     </td>
                                     <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">+10</td>
                                   </tr>
@@ -373,6 +375,43 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                                     psdredd.vercel.app
                                   </a>
                                 </span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-5">
+                      <span className="font-bold text-blue-400 text-3xl sm:text-4xl">7.</span>
+                      <div className="space-y-10 pt-1 flex-1">
+                        <p className="font-bold text-white text-2xl sm:text-4xl tracking-tight">Special Projects :-</p>
+                        
+                        <div className="space-y-12">
+                          <div className="space-y-4">
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-pink-600/10 border-b border-white/10">
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-pink-400">Project Category</th>
+                                    <th className="px-6 py-4 text-sm font-black uppercase tracking-widest text-pink-400 text-right">Points Range</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                  <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-5">
+                                      <p className="text-zinc-200 font-bold">Complex Missions</p>
+                                      <p className="text-sm text-zinc-500 mt-1">Tasks requiring exceptional skill, deep knowledge, and significant talent.</p>
+                                    </td>
+                                    <td className="px-6 py-5 text-right font-black text-emerald-400 text-2xl">100 - 500</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="space-y-6 pt-2">
+                              <p className="text-lg sm:text-xl flex items-start gap-3 pl-2 leading-relaxed">
+                                <span className="text-pink-500 font-black uppercase tracking-tighter shrink-0 border-b-2 border-pink-500/30">Guidance:</span>
+                                <span className="text-zinc-300">Anyone is permitted to take on Special Projects, but it is highly recommended that <strong className="text-pink-400 font-black">Officers</strong> handle them. These projects are significantly more difficult than any other standard tasks and require exceptional talent to execute successfully, which is reflected in the massive point rewards.</span>
                               </p>
                             </div>
                           </div>

@@ -153,12 +153,20 @@ export function ModDetail() {
       const draftId = crypto.randomUUID();
       const draftRef = doc(db, `mods/${id}/drafts/${draftId}`);
       
-      await setDoc(draftRef, {
+      const newDraftData = {
         text: draftText.trim(),
         createdAt: Date.now(),
         createdBy: user?.uid || 'admin',
         points: draftPoints
-      });
+      };
+
+      if (mod.role === 'officer' && drafts.length >= 5) {
+        // Auto process the existing max drafts before adding the new 6th one as the 1st
+        await handleProcessDrafts(drafts);
+        await setDoc(draftRef, newDraftData);
+      } else {
+        await setDoc(draftRef, newDraftData);
+      }
 
       setDraftText('');
       setDraftPoints(1);
@@ -171,16 +179,16 @@ export function ModDetail() {
     }
   };
 
-  const handleProcessDrafts = async () => {
-    if (!id || !user || drafts.length === 0 || !mod || isSubmitting) return;
+  const handleProcessDrafts = async (draftsToProcess: Entry[] = drafts) => {
+    if (!id || !user || draftsToProcess.length === 0 || !mod || isSubmitting) return;
     setIsSubmitting(true);
     
     try {
       const batch = writeBatch(db);
       
-      const combinedText = drafts.map(d => `- ${d.text}`).join('\n');
-      const totalDraftPoints = drafts.reduce((sum, d) => sum + (d.points || 0), 0);
-      const draftCount = drafts.length;
+      const combinedText = draftsToProcess.map(d => `- ${d.text}`).join('\n');
+      const totalDraftPoints = draftsToProcess.reduce((sum, d) => sum + (d.points || 0), 0);
+      const draftCount = draftsToProcess.length;
       
       const now = Date.now();
       const entryId = crypto.randomUUID();
@@ -206,13 +214,13 @@ export function ModDetail() {
       const honorLogId = crypto.randomUUID();
       batch.set(doc(db, `mods/${id}/honor_logs/${honorLogId}`), {
         amount: draftCount,
-        reason: `Auto-increment for ${draftCount} submissions over 7 days`,
+        reason: mod.role === 'officer' ? `Auto-increment for ${draftCount} combined submissions` : `Auto-increment for ${draftCount} submissions over 7 days`,
         createdAt: now,
         createdBy: user.uid,
         type: 'entry_auto'
       });
 
-      drafts.forEach(d => {
+      draftsToProcess.forEach(d => {
         batch.delete(doc(db, `mods/${id}/drafts/${d.id}`));
       });
 
@@ -227,7 +235,7 @@ export function ModDetail() {
 
   useEffect(() => {
     if (user && mod && drafts.length > 0) {
-      if (Date.now() >= mod.deadlineAt) {
+      if (mod.role !== 'officer' && Date.now() >= mod.deadlineAt) {
         handleProcessDrafts();
       }
     }
@@ -1251,7 +1259,13 @@ export function ModDetail() {
             <div className="px-6 py-5 border-b border-indigo-500/20 bg-indigo-900/30 flex justify-between items-center">
                <h4 className="text-lg font-bold text-indigo-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></div> Local Draft Manager</h4>
                {isAdmin && (
-                 <button onClick={handleProcessDrafts} disabled={isSubmitting} className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50 font-black">Submit & Reset Timer Now</button>
+                 <button 
+                   onClick={() => handleProcessDrafts()} 
+                   disabled={isSubmitting || (mod.role === 'officer' && drafts.length < 3)} 
+                   className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-md transition-colors disabled:opacity-50 font-black"
+                 >
+                   {mod.role === 'officer' ? 'Submit Drafts (Min 3)' : 'Submit & Reset Timer Now'}
+                 </button>
                )}
             </div>
             
@@ -1407,7 +1421,12 @@ export function ModDetail() {
               <form onSubmit={handleAddDraft}>
                 <div className="bg-zinc-900 px-6 pb-6 pt-6">
                   <h3 className="text-xl font-bold leading-6 text-indigo-300 mb-2">New Draft Mode Add</h3>
-                  <p className="text-sm text-indigo-400 mb-6 bg-indigo-500/10 px-3 py-2 rounded-md border border-indigo-500/20 inline-block font-medium">Adding this WILL NOT reset the timer. It saves locally to be processed automatically after 7 days.</p>
+                  <p className="text-sm text-indigo-400 mb-6 bg-indigo-500/10 px-3 py-2 rounded-md border border-indigo-500/20 inline-block font-medium">
+                    {mod?.role === 'officer' 
+                       ? 'Officers have NO time limit. Drafts save locally and must reach a minimum of 3 before submission. Upon adding a 6th draft, the first 5 will automatically submit.' 
+                       : 'Adding this WILL NOT reset the timer. It saves locally to be processed automatically after 7 days.'
+                    }
+                  </p>
                   <div className="mt-2">
                     <label className="block text-sm font-medium text-zinc-300 mb-2">Draft Details</label>
                     <textarea
