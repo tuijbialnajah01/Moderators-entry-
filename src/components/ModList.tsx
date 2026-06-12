@@ -9,8 +9,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, PageBreak } from 'docx';
+import { saveAs } from 'file-saver';
 
 // No extra declarations needed for functional autoTable
 
@@ -271,196 +271,40 @@ export function ModList() {
           honorLogs: snHonor.docs.map(d => ({...d.data(), id: d.id})) as any[]
         };
       }));
-      
-      const safeText = (text: string) => {
-        if (!text) return "N/A";
-        return text.normalize("NFKD").replace(/[^\x20-\xFF\s]/g, "").replace(/\s+/g, " ").trim() || "Detail";
+
+      const renderIndexSection = () => {
+        const sortedMods = [...modsData].sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
+        return {
+          properties: {},
+          children: [
+            new Paragraph({ text: "MASTER DIRECTORY", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+            new Paragraph({ text: "" }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "NO.", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "NAME", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "POSITION", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "SCORE", style: "Strong" })] }),
+                  ]
+                }),
+                ...sortedMods.map((d, i) => new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: `${i + 1}` })] }),
+                    new TableCell({ children: [new Paragraph({ text: d.mod.name })] }),
+                    new TableCell({ children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
+                    new TableCell({ children: [new Paragraph({ text: `${d.mod.totalPoints || 0}` })] }),
+                  ]
+                }))
+              ]
+            })
+          ]
+        };
       };
 
-      const colors = {
-        bg: [250, 250, 250] as [number, number, number],
-        primary: [10, 10, 10] as [number, number, number],
-        secondary: [113, 113, 122] as [number, number, number],
-        accent: [37, 99, 235] as [number, number, number],
-        danger: [220, 38, 38] as [number, number, number],
-        success: [5, 150, 105] as [number, number, number],
-        border: [228, 228, 231] as [number, number, number]
-      };
-
-      const renderHeader = (doc: jsPDF, title: string) => {
-        const pageWidth = doc.internal.pageSize.width;
-        doc.setFillColor(255, 255, 255);
-        doc.rect(0, 0, pageWidth, doc.internal.pageSize.height, 'F');
-        doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-        doc.rect(0, 0, pageWidth, 8, 'F');
-        doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-        doc.rect(0, 8, pageWidth, 1.5, 'F');
-
-        doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(28);
-        doc.text(title, 16, 34);
-      };
-
-      const renderMod = (doc: jsPDF, data: any) => {
-        const { mod, entries, drafts } = data;
-        const pageWidth = doc.internal.pageSize.width;
-        const pageHeight = doc.internal.pageSize.height;
-        let currentY = 20;
-
-        renderHeader(doc, 'ANALYTICS REPORT');
-        
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-        doc.text(`ID: ${mod.id?.slice(-10).toUpperCase()}`, 16, 42);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.text(`GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 16, 47);
-
-        const status = (mod.status || 'ACTIVE').toUpperCase();
-        const isBlacklisted = status === 'BLACKLISTED';
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        if (isBlacklisted) doc.setTextColor(colors.danger[0], colors.danger[1], colors.danger[2]);
-        else doc.setTextColor(colors.success[0], colors.success[1], colors.success[2]);
-        doc.text(`STATUS: ${status}`, pageWidth - 16, 34, { align: 'right' });
-
-        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-        doc.setLineWidth(0.5);
-        doc.line(16, 55, pageWidth - 16, 55);
-
-        currentY = 75;
-        doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-        doc.setFontSize(36);
-        doc.setFont('helvetica', 'bold');
-        doc.text(safeText(mod.name), 16, currentY);
-        
-        currentY += 8;
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-        doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 16, currentY);
-
-        currentY += 20;
-
-        const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0';
-        
-        autoTable(doc, {
-          startY: currentY,
-          head: [['METRIC', 'VALUE']],
-          body: [
-            ['Accumulated Merit', `${mod.totalPoints || 0}`],
-            ['Data Logs Submitted', `${entries.length}`],
-            ['Performance/Entry Ratio', `${peRatio}`],
-            ['Honor Standing', `${mod.honorScore ?? 100} / 100`],
-            ['Contact Registry', mod.phoneNumber || 'Unlinked']
-          ],
-          theme: 'plain',
-          headStyles: { textColor: colors.secondary, fontSize: 9, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
-          styles: { fontSize: 11, cellPadding: { top: 6, bottom: 6, left: 0, right: 0 }, font: 'helvetica', textColor: colors.primary },
-          columnStyles: { 0: { cellWidth: 100 }, 1: { fontStyle: 'bold' } },
-          margin: { left: 16, right: 16 },
-          didDrawCell: (data) => {
-            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
-            doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-          }
-        });
-
-        currentY = (doc as any).lastAutoTable.finalY + 25;
-
-        if (drafts && drafts.length > 0) {
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-          doc.text('PENDING DRAFTS', 16, currentY);
-
-          autoTable(doc, {
-            startY: currentY + 6,
-            head: [['DATE', 'PTS', 'DRAFT DETAILS']],
-            body: drafts.map((d: any) => [new Date(d.createdAt).toLocaleDateString(), `+${d.points || 0}`, safeText(d.text)]),
-            theme: 'plain',
-            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
-            styles: { fontSize: 9, cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, font: 'helvetica', valign: 'top', overflow: 'linebreak', textColor: colors.primary },
-            columnStyles: { 0: { cellWidth: 24, textColor: colors.secondary }, 1: { cellWidth: 16, fontStyle: 'bold', textColor: colors.accent }, 2: { cellWidth: 'auto' } },
-            margin: { left: 16, right: 16 },
-            didDrawCell: (data) => {
-              doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
-              doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-            }
-          });
-          currentY = (doc as any).lastAutoTable.finalY + 25;
-        }
-
-        if (entries && entries.length > 0) {
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-          doc.text('ACTIVITY LEDGER', 16, currentY);
-          
-          autoTable(doc, {
-            startY: currentY + 6,
-            head: [['ID', 'DATE', 'PTS', 'LOG DETAILS']],
-            body: entries.map((e: any, idx: number) => [`NO.${entries.length - idx}`, new Date(e.createdAt).toLocaleDateString(), `+${e.points || 0}`, safeText(e.text)]),
-            theme: 'plain',
-            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
-            styles: { fontSize: 9, cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, font: 'helvetica', valign: 'top', overflow: 'linebreak', textColor: colors.primary },
-            columnStyles: { 0: { cellWidth: 20, fontStyle: 'bold', textColor: colors.secondary }, 1: { cellWidth: 24, textColor: colors.secondary }, 2: { cellWidth: 16, fontStyle: 'bold', textColor: colors.success }, 3: { cellWidth: 'auto' } },
-            margin: { left: 16, right: 16 },
-            didDrawCell: (data) => {
-              doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
-              doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-            },
-            didDrawPage: (data) => {
-              doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-              doc.text(`PAGE ${data.pageNumber}`, 16, pageHeight - 12);
-              doc.text(`${safeText(mod.name).toUpperCase()} • CONFIDENTIAL`, doc.internal.pageSize.width - 16, pageHeight - 12, { align: 'right' });
-            }
-          });
-        }
-      };
-
-      const drawPageFooter = (data: any, title: string) => {
-        const doc = data.doc;
-        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-        doc.text(`PAGE ${data.pageNumber}`, 16, doc.internal.pageSize.height - 12);
-        doc.text(`${title} • CONFIDENTIAL`, doc.internal.pageSize.width - 16, doc.internal.pageSize.height - 12, { align: 'right' });
-      };
-
-      const renderIndex = (doc: jsPDF, pageMap?: Map<string, number>) => {
-         renderHeader(doc, 'MASTER DIRECTORY');
-         const sortedMods = [...modsData].sort((a,b) => b.mod.totalPoints! - a.mod.totalPoints!);
-
-         autoTable(doc, {
-            startY: 45,
-            head: [['NO.', 'NAME', 'POSITION', 'SCORE', 'PAGE']],
-            body: sortedMods.map((d, i) => [
-               i + 1,
-               d.mod.name,
-               d.mod.role?.toUpperCase() || 'MODERATOR',
-               d.mod.totalPoints || 0,
-               pageMap ? pageMap.get(d.mod.id) : 999
-            ]),
-            theme: 'plain',
-            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 10, textColor: colors.primary, cellPadding: 6 },
-            columnStyles: { 4: { fontStyle: 'bold', textColor: colors.accent } },
-            margin: { left: 16, right: 16 },
-            didDrawCell: (data) => {
-               doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
-               doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-               if (pageMap && data.section === 'body') {
-                 const targetPage = pageMap.get(sortedMods[data.row.index].mod.id);
-                 if (targetPage) {
-                   doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { pageNumber: targetPage });
-                 }
-               }
-            },
-            didDrawPage: (data) => drawPageFooter(data, 'MASTER DIRECTORY')
-         });
-      };
-
-      const renderLeaderboard = (doc: jsPDF, type: 'points' | 'pe' | 'honor', pageMap?: Map<string, number>) => {
+      const renderLeaderboardSection = (type: 'points' | 'pe' | 'honor') => {
         let title = '';
         let headLabel = '';
         let sortedMods = [...modsData];
@@ -483,78 +327,121 @@ export function ModList() {
           sortedMods.sort((a,b) => (b.mod.honorScore ?? 100) - (a.mod.honorScore ?? 100));
         }
 
-        renderHeader(doc, title);
-
-        autoTable(doc, {
-            startY: 45,
-            head: [['RANK', 'NAME', 'POSITION', headLabel, 'PROFILE']],
-            body: sortedMods.map((d, i) => {
-               let val = '';
-               if (type === 'points') val = `${d.mod.totalPoints || 0}`;
-               if (type === 'pe') val = `${d.entries.length > 0 ? ((d.mod.totalPoints || 0) / d.entries.length).toFixed(1) : '0.0'}`;
-               if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
-
-               return [
-                 i + 1,
-                 d.mod.name,
-                 d.mod.role?.toUpperCase() || 'MODERATOR',
-                 val,
-                 pageMap ? `Page ${pageMap.get(d.mod.id)}` : ''
-               ];
-            }),
-            theme: 'plain',
-            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 10, textColor: colors.primary, cellPadding: 6 },
-            columnStyles: { 3: { fontStyle: 'bold', textColor: colors.success }, 4: { fontStyle: 'bold', textColor: colors.accent } },
-            margin: { left: 16, right: 16 },
-            didDrawCell: (data) => {
-               doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
-               doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-               if (pageMap && data.section === 'body') {
-                 const targetPage = pageMap.get(sortedMods[data.row.index].mod.id);
-                 if (targetPage) {
-                   doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { pageNumber: targetPage });
-                 }
-               }
-            },
-            didDrawPage: (data) => drawPageFooter(data, title)
-         });
+        return {
+          properties: { type: "nextPage" as any },
+          children: [
+            new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+            new Paragraph({ text: "" }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "RANK", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "NAME", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "POSITION", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: headLabel, style: "Strong" })] }),
+                  ]
+                }),
+                ...sortedMods.map((d, i) => {
+                  let val = '';
+                  if (type === 'points') val = `${d.mod.totalPoints || 0}`;
+                  if (type === 'pe') val = `${d.entries.length > 0 ? ((d.mod.totalPoints || 0) / d.entries.length).toFixed(1) : '0.0'}`;
+                  if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
+                  return new TableRow({
+                    children: [
+                      new TableCell({ children: [new Paragraph({ text: `${i + 1}` })] }),
+                      new TableCell({ children: [new Paragraph({ text: d.mod.name })] }),
+                      new TableCell({ children: [new Paragraph({ text: d.mod.role?.toUpperCase() || 'MODERATOR' })] }),
+                      new TableCell({ children: [new Paragraph({ text: val })] }),
+                    ]
+                  });
+                })
+              ]
+            })
+          ]
+        };
       };
 
-      const dummyDoc = new jsPDF();
-      const tempPageMap = new Map<string, number>();
-      
-      const sortedContentMods = [...modsData].sort((a,b) => b.mod.totalPoints! - a.mod.totalPoints!);
+      const renderModSection = (data: any) => {
+        const { mod, entries, drafts } = data;
+        const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0';
+        const status = (mod.status || 'ACTIVE').toUpperCase();
+        
+        const children = [
+          new Paragraph({ text: "ANALYTICS REPORT", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `ID: ${mod.id?.slice(-10).toUpperCase()}`, bold: true })] }),
+          new Paragraph({ children: [new TextRun({ text: `GENERATED: ${new Date().toLocaleString().toUpperCase()}` })] }),
+          new Paragraph({ children: [new TextRun({ text: `STATUS: ${status}`, bold: true, color: status === 'BLACKLISTED' ? "DC2626" : "059669" })], alignment: AlignmentType.RIGHT }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: mod.name, heading: HeadingLevel.HEADING_2 }),
+          new Paragraph({ children: [new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })] }),
+          new Paragraph({ text: "" }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "METRIC", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: "VALUE", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Accumulated Merit" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Data Logs Submitted" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Performance/Entry Ratio" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "Honor Standing" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } }), new TableCell({ children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } })] }),
+            ],
+          }),
+          new Paragraph({ text: "" })
+        ];
 
-      // Calculate pages offset (1 Index + 3 Leaderboards = 4 pages offset, assuming they take 1 page each. Better to let dummyDoc calculate it)
-      renderIndex(dummyDoc);
-      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'points');
-      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'pe');
-      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'honor');
+        if (drafts && drafts.length > 0) {
+          children.push(
+            new Paragraph({ text: "PENDING DRAFTS", heading: HeadingLevel.HEADING_3 }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "DRAFT DETAILS", style: "Strong" })] })] }),
+                ...drafts.map((d: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(d.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${d.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: d.text || "Detail" })] })] }))
+              ]
+            }),
+            new Paragraph({ text: "" })
+          );
+        }
 
-      sortedContentMods.forEach((d) => {
-         dummyDoc.addPage();
-         tempPageMap.set(d.mod.id, dummyDoc.internal.getNumberOfPages()); 
-         renderMod(dummyDoc, d);
+        if (entries && entries.length > 0) {
+          children.push(
+            new Paragraph({ text: "ACTIVITY LEDGER", heading: HeadingLevel.HEADING_3 }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }), new TableCell({ children: [new Paragraph({ text: "LOG DETAILS", style: "Strong" })] })] }),
+                ...entries.map((e: any) => new TableRow({ children: [new TableCell({ children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }), new TableCell({ children: [new Paragraph({ text: `+${e.points || 0}` })] }), new TableCell({ children: [new Paragraph({ text: e.text || "Detail" })] })] }))
+              ]
+            }),
+            new Paragraph({ text: "" })
+          );
+        }
+
+        return {
+          properties: { type: "nextPage" as any },
+          children
+        };
+      };
+
+      const sortedContentMods = [...modsData].sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
+
+      const doc = new Document({
+        sections: [
+          renderIndexSection(),
+          renderLeaderboardSection('points'),
+          renderLeaderboardSection('pe'),
+          renderLeaderboardSection('honor'),
+          ...sortedContentMods.map(d => renderModSection(d))
+        ]
       });
 
-      const realDoc = new jsPDF();
-      
-      renderIndex(realDoc, tempPageMap);
-      realDoc.addPage(); renderLeaderboard(realDoc, 'points', tempPageMap);
-      realDoc.addPage(); renderLeaderboard(realDoc, 'pe', tempPageMap);
-      realDoc.addPage(); renderLeaderboard(realDoc, 'honor', tempPageMap);
-      
-      sortedContentMods.forEach((d) => {
-         realDoc.addPage();
-         renderMod(realDoc, d);
-      });
-      
-      realDoc.save('Master_Directory_Report.pdf');
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, 'Master_Directory_Report.docx');
 
     } catch (e) {
       console.error(e);
-      alert('Failed to generate full PDF report');
+      alert('Failed to generate full DOCX report');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -839,7 +726,7 @@ export function ModList() {
                         className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 mt-4 px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full disabled:opacity-50"
                       >
                         <Download className="w-10 h-10 sm:w-12 sm:h-12" />
-                        <span>{isGeneratingPDF ? 'Compiling...' : 'Master Directory PDF'}</span>
+                        <span>{isGeneratingPDF ? 'Compiling...' : 'Master Directory DOCX'}</span>
                       </button>
                     </div>
                   )}

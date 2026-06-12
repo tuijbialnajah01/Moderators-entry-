@@ -8,8 +8,8 @@ import { CountdownTimer } from './CountdownTimer';
 import { ArrowLeft, Plus, Trash2, Pencil, AlertTriangle, ShieldCheck, Menu, Trophy, Download, RotateCcw, ExternalLink } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from 'docx';
+import { saveAs } from 'file-saver';
 
 // No extra declarations needed for functional autoTable
 
@@ -241,191 +241,120 @@ export function ModDetail() {
     }
   }, [mod, drafts, user]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!mod) return;
 
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      
-      // Elite / Clean Palette
-      const colors = {
-        bg: [250, 250, 250] as [number, number, number],
-        primary: [10, 10, 10] as [number, number, number],      // Black
-        secondary: [113, 113, 122] as [number, number, number],   // Zinc-500
-        accent: [37, 99, 235] as [number, number, number],       // Blue-600
-        danger: [220, 38, 38] as [number, number, number],       // Red-600
-        success: [5, 150, 105] as [number, number, number],      // Emerald-600
-        border: [228, 228, 231] as [number, number, number]      // Zinc-200
-      };
-
-      const safeText = (text: string) => {
-        if (!text) return "N/A";
-        return text
-          .normalize("NFKD")
-          .replace(/[^\x20-\xFF\s]/g, "")
-          .replace(/\s+/g, " ")
-          .trim() || "Detail";
-      };
-
-      // Full Page Background 
-      // (Optional soft background, but let's keep it pristine white for print)
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-      // Top minimalist border
-      doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.rect(0, 0, pageWidth, 8, 'F');
-
-      // Accent Line
-      doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-      doc.rect(0, 8, pageWidth, 1.5, 'F');
-
-      // Title & Header 
-      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(28);
-      doc.text('ANALYTICS REPORT', 16, 34);
-      
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-      doc.text(`ID: ${mod.id?.slice(-10).toUpperCase()}`, 16, 42);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.text(`GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 16, 47);
-
-      // Status Text (No button-like backgrounds)
-      const status = (mod.status || 'ACTIVE').toUpperCase();
-      const isBlacklisted = status === 'BLACKLISTED';
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      if (isBlacklisted) {
-        doc.setTextColor(colors.danger[0], colors.danger[1], colors.danger[2]);
-      } else {
-        doc.setTextColor(colors.success[0], colors.success[1], colors.success[2]);
-      }
-      doc.text(`STATUS: ${status}`, pageWidth - 16, 34, { align: 'right' });
-
-      // Divider
-      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-      doc.setLineWidth(0.5);
-      doc.line(16, 55, pageWidth - 16, 55);
-
-      // Subject Profile
-      let currentY = 75;
-      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.setFontSize(36);
-      doc.setFont('helvetica', 'bold');
-      doc.text(safeText(mod.name), 16, currentY);
-      
-      currentY += 8;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-      doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 16, currentY);
-
-      currentY += 20;
-
-      // Stats Area - Clean layout
       const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0';
+      const status = (mod.status || 'ACTIVE').toUpperCase();
       
-      autoTable(doc, {
-        startY: currentY,
-        head: [['METRIC', 'VALUE']],
-        body: [
-          ['Accumulated Merit', `${mod.totalPoints || 0}`],
-          ['Data Logs Submitted', `${entries.length}`],
-          ['Performance/Entry Ratio', `${peRatio}`],
-          ['Honor Standing', `${mod.honorScore ?? 100} / 100`],
-          ['Contact Registry', mod.phoneNumber || 'Unlinked']
-        ],
-        theme: 'plain',
-        headStyles: { 
-          textColor: colors.secondary, 
-          fontSize: 9, 
-          fontStyle: 'bold', 
-          cellPadding: { top: 4, bottom: 4, left: 0, right: 0 }
-        },
-        styles: { 
-          fontSize: 11, 
-          cellPadding: { top: 6, bottom: 6, left: 0, right: 0 }, 
-          font: 'helvetica',
-          textColor: colors.primary
-        },
-        columnStyles: {
-          0: { cellWidth: 100 },
-          1: { fontStyle: 'bold' }
-        },
-        margin: { left: 16, right: 16 },
-        didDrawCell: (data) => {
-          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          doc.setLineWidth(0.1);
-          // Only draw a line at the bottom of the cell
-          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-        }
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "ANALYTICS REPORT",
+              heading: HeadingLevel.HEADING_1,
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `ID: ${mod.id?.slice(-10).toUpperCase()}`, bold: true }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `GENERATED: ${new Date().toLocaleString().toUpperCase()}` }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `STATUS: ${status}`, bold: true, color: status === 'BLACKLISTED' ? "DC2626" : "059669" }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              text: mod.name,
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })
+              ]
+            }),
+            new Paragraph({ text: "" }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "METRIC", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ text: "VALUE", style: "Strong" })], borders: { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ],
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "Accumulated Merit" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ text: `${mod.totalPoints || 0}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ],
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "Data Logs Submitted" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ text: `${entries.length}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ],
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "Performance/Entry Ratio" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ text: `${peRatio}`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ],
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "Honor Standing" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ text: `${mod.honorScore ?? 100} / 100`, style: "Strong" })], borders: { left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } } }),
+                  ],
+                }),
+              ],
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              text: "ACTIVITY LEDGER",
+              heading: HeadingLevel.HEADING_3,
+            }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: "DATE", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "PTS", style: "Strong" })] }),
+                    new TableCell({ children: [new Paragraph({ text: "LOG DETAILS", style: "Strong" })] }),
+                  ],
+                }),
+                ...entries.map(e => 
+                  new TableRow({
+                    children: [
+                      new TableCell({ children: [new Paragraph({ text: new Date(e.createdAt).toLocaleDateString() })] }),
+                      new TableCell({ children: [new Paragraph({ text: `+${e.points || 0}` })] }),
+                      new TableCell({ children: [new Paragraph({ text: e.text || "Detail" })] }),
+                    ],
+                  })
+                )
+              ]
+            })
+          ],
+        }],
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 30;
-
-      // Activity Feed Section Header
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.text('ACTIVITY LEDGER', 16, currentY);
-      
-      const entryRows = entries.map((e, idx) => [
-        `NO.${entries.length - idx}`,
-        new Date(e.createdAt).toLocaleDateString(),
-        `+${e.points || 0}`,
-        safeText(e.text)
-      ]);
-
-      autoTable(doc, {
-        startY: currentY + 6,
-        head: [['ID', 'DATE', 'PTS', 'LOG DETAILS']],
-        body: entryRows,
-        theme: 'plain',
-        headStyles: { 
-          textColor: colors.secondary, 
-          fontStyle: 'bold', 
-          fontSize: 8,
-          cellPadding: { top: 4, bottom: 4, left: 0, right: 0 }
-        },
-        styles: { 
-          fontSize: 9, 
-          cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, 
-          font: 'helvetica',
-          valign: 'top',
-          overflow: 'linebreak',
-          textColor: colors.primary
-        },
-        columnStyles: {
-          0: { cellWidth: 20, fontStyle: 'bold', textColor: colors.secondary },
-          1: { cellWidth: 24, textColor: colors.secondary },
-          2: { cellWidth: 16, fontStyle: 'bold', textColor: colors.success },
-          3: { cellWidth: 'auto' }
-        },
-        margin: { left: 16, right: 16 },
-        didDrawCell: (data) => {
-          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          doc.setLineWidth(0.1);
-          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
-        },
-        didDrawPage: (data) => {
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-          doc.text(`PAGE ${data.pageNumber}`, 16, pageHeight - 12);
-          doc.text(`${safeText(mod.name).toUpperCase()} • CONFIDENTIAL`, pageWidth - 16, pageHeight - 12, { align: 'right' });
-        }
-      });
-
-      doc.save(`${safeText(mod.name).replace(/\s+/g, '_')}_Analytics.pdf`);
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `${mod.name.replace(/\s+/g, '_')}_Analytics.docx`);
     } catch (error) {
-      console.error('PDF Generation Error:', error);
-      alert('Error generating PDF. Some characters may not be compatible.');
+      console.error('DOCX Generation Error:', error);
+      alert('Error generating DOCX.');
     }
   };
 
@@ -946,7 +875,7 @@ export function ModDetail() {
                       className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 px-6 py-4 sm:px-8 sm:py-5 rounded-3xl text-xl sm:text-2xl font-black tracking-wider uppercase flex items-center gap-4 transition-colors w-full"
                     >
                       <Download className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
-                      <span>PDF Report</span>
+                      <span>DOCX Report</span>
                     </button>
                     {isAdmin && (
                       <button 
