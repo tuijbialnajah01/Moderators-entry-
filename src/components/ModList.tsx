@@ -279,7 +279,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.AUTOFIT,
-            width: { size: "100%", type: WidthType.PERCENTAGE },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -335,7 +335,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.AUTOFIT,
-            width: { size: "100%", type: WidthType.PERCENTAGE },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -386,7 +386,7 @@ export function ModList() {
           new Paragraph({ text: "" }),
           new Table({
             layout: TableLayoutType.AUTOFIT,
-            width: { size: "100%", type: WidthType.PERCENTAGE },
+            width: { size: 100, type: WidthType.PERCENTAGE },
             borders: {
               top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
               bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -411,7 +411,7 @@ export function ModList() {
             new Paragraph({ text: "PENDING DRAFTS", heading: HeadingLevel.HEADING_3 }),
             new Table({
               layout: TableLayoutType.AUTOFIT,
-              width: { size: "100%", type: WidthType.PERCENTAGE },
+              width: { size: 100, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
@@ -434,7 +434,7 @@ export function ModList() {
             new Paragraph({ text: "ACTIVITY LEDGER", heading: HeadingLevel.HEADING_3 }),
             new Table({
               layout: TableLayoutType.AUTOFIT,
-              width: { size: "100%", type: WidthType.PERCENTAGE },
+              width: { size: 100, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" },

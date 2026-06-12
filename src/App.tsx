@@ -9,7 +9,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="h-screen w-full bg-black font-sans text-zinc-100 flex flex-col overflow-hidden select-none">
+        <div className="h-screen w-full bg-transparent font-sans text-zinc-100 flex flex-col overflow-hidden select-none">
           <Routes>
             <Route path="/" element={<ModList />} />
             <Route path="/mod/:id" element={<ModDetail />} />
