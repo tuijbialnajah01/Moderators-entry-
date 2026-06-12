@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useDeferredValue, useCallback } from 'react';
-import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc } from 'firebase/firestore';
+import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, handleFirestoreError, OperationType } from '../types';
 import { ModCardSkeleton } from './Skeletons';
@@ -7,8 +7,10 @@ import { CountdownTimer } from './CountdownTimer';
 import { TermsModal } from './TermsModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search } from 'lucide-react';
+import { Trophy, Clock, ScrollText, LogOut, LogIn, AlertTriangle, ShieldCheck, ChevronDown, Check, Filter, Menu, Search, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // No extra declarations needed for functional autoTable
 
@@ -181,6 +183,7 @@ export function ModList() {
   const [modRoleView, setModRoleView] = useState<'moderator' | 'officer'>('moderator');
   const [newModRole, setNewModRole] = useState<'moderator' | 'officer'>('moderator');
   const [termsRoleView, setTermsRoleView] = useState<'moderator' | 'officer'>('moderator');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [expandedModId, setExpandedModId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -246,6 +249,316 @@ export function ModList() {
       unsubscribeDraftsMap();
     };
   }, [isAdmin]);
+
+  const handleDownloadFullPDF = async () => {
+    if (!isAdmin || isGeneratingPDF) return;
+    setIsGeneratingPDF(true);
+    
+    try {
+      const activeMods = mods.filter(m => m.status !== 'blacklisted'); 
+
+      const modsData = await Promise.all(activeMods.map(async (mod) => {
+        const qEntries = query(collection(db, 'mods', mod.id, 'entries'), orderBy('createdAt', 'desc'));
+        const snEntries = await getDocs(qEntries);
+        const qDrafts = query(collection(db, 'mods', mod.id, 'drafts'), orderBy('createdAt', 'desc'));
+        const snDrafts = await getDocs(qDrafts);
+        const qHonor = query(collection(db, 'mods', mod.id, 'honor_logs'), orderBy('createdAt', 'desc'));
+        const snHonor = await getDocs(qHonor);
+        return { 
+          mod, 
+          entries: snEntries.docs.map(d => ({...d.data(), id: d.id})) as any[],
+          drafts: snDrafts.docs.map(d => ({...d.data(), id: d.id})) as any[],
+          honorLogs: snHonor.docs.map(d => ({...d.data(), id: d.id})) as any[]
+        };
+      }));
+      
+      const safeText = (text: string) => {
+        if (!text) return "N/A";
+        return text.normalize("NFKD").replace(/[^\x20-\xFF\s]/g, "").replace(/\s+/g, " ").trim() || "Detail";
+      };
+
+      const colors = {
+        bg: [250, 250, 250] as [number, number, number],
+        primary: [10, 10, 10] as [number, number, number],
+        secondary: [113, 113, 122] as [number, number, number],
+        accent: [37, 99, 235] as [number, number, number],
+        danger: [220, 38, 38] as [number, number, number],
+        success: [5, 150, 105] as [number, number, number],
+        border: [228, 228, 231] as [number, number, number]
+      };
+
+      const renderHeader = (doc: jsPDF, title: string) => {
+        const pageWidth = doc.internal.pageSize.width;
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, pageWidth, doc.internal.pageSize.height, 'F');
+        doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+        doc.rect(0, 0, pageWidth, 8, 'F');
+        doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+        doc.rect(0, 8, pageWidth, 1.5, 'F');
+
+        doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(28);
+        doc.text(title, 16, 34);
+      };
+
+      const renderMod = (doc: jsPDF, data: any) => {
+        const { mod, entries, drafts } = data;
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        let currentY = 20;
+
+        renderHeader(doc, 'ANALYTICS REPORT');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+        doc.text(`ID: ${mod.id?.slice(-10).toUpperCase()}`, 16, 42);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.text(`GENERATED: ${new Date().toLocaleString().toUpperCase()}`, 16, 47);
+
+        const status = (mod.status || 'ACTIVE').toUpperCase();
+        const isBlacklisted = status === 'BLACKLISTED';
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        if (isBlacklisted) doc.setTextColor(colors.danger[0], colors.danger[1], colors.danger[2]);
+        else doc.setTextColor(colors.success[0], colors.success[1], colors.success[2]);
+        doc.text(`STATUS: ${status}`, pageWidth - 16, 34, { align: 'right' });
+
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+        doc.setLineWidth(0.5);
+        doc.line(16, 55, pageWidth - 16, 55);
+
+        currentY = 75;
+        doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+        doc.setFontSize(36);
+        doc.setFont('helvetica', 'bold');
+        doc.text(safeText(mod.name), 16, currentY);
+        
+        currentY += 8;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+        doc.text(mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', 16, currentY);
+
+        currentY += 20;
+
+        const peRatio = entries.length > 0 ? ((mod.totalPoints || 0) / entries.length).toFixed(1) : '0.0';
+        
+        autoTable(doc, {
+          startY: currentY,
+          head: [['METRIC', 'VALUE']],
+          body: [
+            ['Accumulated Merit', `${mod.totalPoints || 0}`],
+            ['Data Logs Submitted', `${entries.length}`],
+            ['Performance/Entry Ratio', `${peRatio}`],
+            ['Honor Standing', `${mod.honorScore ?? 100} / 100`],
+            ['Contact Registry', mod.phoneNumber || 'Unlinked']
+          ],
+          theme: 'plain',
+          headStyles: { textColor: colors.secondary, fontSize: 9, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
+          styles: { fontSize: 11, cellPadding: { top: 6, bottom: 6, left: 0, right: 0 }, font: 'helvetica', textColor: colors.primary },
+          columnStyles: { 0: { cellWidth: 100 }, 1: { fontStyle: 'bold' } },
+          margin: { left: 16, right: 16 },
+          didDrawCell: (data) => {
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
+            doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+          }
+        });
+
+        currentY = (doc as any).lastAutoTable.finalY + 25;
+
+        if (drafts && drafts.length > 0) {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+          doc.text('PENDING DRAFTS', 16, currentY);
+
+          autoTable(doc, {
+            startY: currentY + 6,
+            head: [['DATE', 'PTS', 'DRAFT DETAILS']],
+            body: drafts.map((d: any) => [new Date(d.createdAt).toLocaleDateString(), `+${d.points || 0}`, safeText(d.text)]),
+            theme: 'plain',
+            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
+            styles: { fontSize: 9, cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, font: 'helvetica', valign: 'top', overflow: 'linebreak', textColor: colors.primary },
+            columnStyles: { 0: { cellWidth: 24, textColor: colors.secondary }, 1: { cellWidth: 16, fontStyle: 'bold', textColor: colors.accent }, 2: { cellWidth: 'auto' } },
+            margin: { left: 16, right: 16 },
+            didDrawCell: (data) => {
+              doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
+              doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+            }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 25;
+        }
+
+        if (entries && entries.length > 0) {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+          doc.text('ACTIVITY LEDGER', 16, currentY);
+          
+          autoTable(doc, {
+            startY: currentY + 6,
+            head: [['ID', 'DATE', 'PTS', 'LOG DETAILS']],
+            body: entries.map((e: any, idx: number) => [`NO.${entries.length - idx}`, new Date(e.createdAt).toLocaleDateString(), `+${e.points || 0}`, safeText(e.text)]),
+            theme: 'plain',
+            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 0, right: 0 } },
+            styles: { fontSize: 9, cellPadding: { top: 6, bottom: 6, left: 0, right: 4 }, font: 'helvetica', valign: 'top', overflow: 'linebreak', textColor: colors.primary },
+            columnStyles: { 0: { cellWidth: 20, fontStyle: 'bold', textColor: colors.secondary }, 1: { cellWidth: 24, textColor: colors.secondary }, 2: { cellWidth: 16, fontStyle: 'bold', textColor: colors.success }, 3: { cellWidth: 'auto' } },
+            margin: { left: 16, right: 16 },
+            didDrawCell: (data) => {
+              doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
+              doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+            },
+            didDrawPage: (data) => {
+              doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+              doc.text(`PAGE ${data.pageNumber}`, 16, pageHeight - 12);
+              doc.text(`${safeText(mod.name).toUpperCase()} • CONFIDENTIAL`, doc.internal.pageSize.width - 16, pageHeight - 12, { align: 'right' });
+            }
+          });
+        }
+      };
+
+      const drawPageFooter = (data: any, title: string) => {
+        const doc = data.doc;
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+        doc.text(`PAGE ${data.pageNumber}`, 16, doc.internal.pageSize.height - 12);
+        doc.text(`${title} • CONFIDENTIAL`, doc.internal.pageSize.width - 16, doc.internal.pageSize.height - 12, { align: 'right' });
+      };
+
+      const renderIndex = (doc: jsPDF, pageMap?: Map<string, number>) => {
+         renderHeader(doc, 'MASTER DIRECTORY');
+         const sortedMods = [...modsData].sort((a,b) => b.mod.totalPoints! - a.mod.totalPoints!);
+
+         autoTable(doc, {
+            startY: 45,
+            head: [['NO.', 'NAME', 'POSITION', 'SCORE', 'PAGE']],
+            body: sortedMods.map((d, i) => [
+               i + 1,
+               d.mod.name,
+               d.mod.role?.toUpperCase() || 'MODERATOR',
+               d.mod.totalPoints || 0,
+               pageMap ? pageMap.get(d.mod.id) : 999
+            ]),
+            theme: 'plain',
+            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 9 },
+            styles: { fontSize: 10, textColor: colors.primary, cellPadding: 6 },
+            columnStyles: { 4: { fontStyle: 'bold', textColor: colors.accent } },
+            margin: { left: 16, right: 16 },
+            didDrawCell: (data) => {
+               doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
+               doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+               if (pageMap && data.section === 'body') {
+                 const targetPage = pageMap.get(sortedMods[data.row.index].mod.id);
+                 if (targetPage) {
+                   doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { pageNumber: targetPage });
+                 }
+               }
+            },
+            didDrawPage: (data) => drawPageFooter(data, 'MASTER DIRECTORY')
+         });
+      };
+
+      const renderLeaderboard = (doc: jsPDF, type: 'points' | 'pe' | 'honor', pageMap?: Map<string, number>) => {
+        let title = '';
+        let headLabel = '';
+        let sortedMods = [...modsData];
+
+        if (type === 'points') {
+          title = 'LEADERBOARD: TOP POINTS';
+          headLabel = 'POINTS';
+          sortedMods.sort((a,b) => (b.mod.totalPoints || 0) - (a.mod.totalPoints || 0));
+        } else if (type === 'pe') {
+          title = 'LEADERBOARD: P/E RATIO';
+          headLabel = 'P/E RATIO';
+          sortedMods.sort((a,b) => {
+             const peA = a.entries.length > 0 ? ((a.mod.totalPoints || 0) / a.entries.length) : 0;
+             const peB = b.entries.length > 0 ? ((b.mod.totalPoints || 0) / b.entries.length) : 0;
+             return peB - peA;
+          });
+        } else if (type === 'honor') {
+          title = 'LEADERBOARD: HONOR SCORE';
+          headLabel = 'HONOR';
+          sortedMods.sort((a,b) => (b.mod.honorScore ?? 100) - (a.mod.honorScore ?? 100));
+        }
+
+        renderHeader(doc, title);
+
+        autoTable(doc, {
+            startY: 45,
+            head: [['RANK', 'NAME', 'POSITION', headLabel, 'PROFILE']],
+            body: sortedMods.map((d, i) => {
+               let val = '';
+               if (type === 'points') val = `${d.mod.totalPoints || 0}`;
+               if (type === 'pe') val = `${d.entries.length > 0 ? ((d.mod.totalPoints || 0) / d.entries.length).toFixed(1) : '0.0'}`;
+               if (type === 'honor') val = `${d.mod.honorScore ?? 100}`;
+
+               return [
+                 i + 1,
+                 d.mod.name,
+                 d.mod.role?.toUpperCase() || 'MODERATOR',
+                 val,
+                 pageMap ? `Page ${pageMap.get(d.mod.id)}` : ''
+               ];
+            }),
+            theme: 'plain',
+            headStyles: { textColor: colors.secondary, fontStyle: 'bold', fontSize: 9 },
+            styles: { fontSize: 10, textColor: colors.primary, cellPadding: 6 },
+            columnStyles: { 3: { fontStyle: 'bold', textColor: colors.success }, 4: { fontStyle: 'bold', textColor: colors.accent } },
+            margin: { left: 16, right: 16 },
+            didDrawCell: (data) => {
+               doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]); doc.setLineWidth(0.1);
+               doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+               if (pageMap && data.section === 'body') {
+                 const targetPage = pageMap.get(sortedMods[data.row.index].mod.id);
+                 if (targetPage) {
+                   doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { pageNumber: targetPage });
+                 }
+               }
+            },
+            didDrawPage: (data) => drawPageFooter(data, title)
+         });
+      };
+
+      const dummyDoc = new jsPDF();
+      const tempPageMap = new Map<string, number>();
+      
+      const sortedContentMods = [...modsData].sort((a,b) => b.mod.totalPoints! - a.mod.totalPoints!);
+
+      // Calculate pages offset (1 Index + 3 Leaderboards = 4 pages offset, assuming they take 1 page each. Better to let dummyDoc calculate it)
+      renderIndex(dummyDoc);
+      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'points');
+      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'pe');
+      dummyDoc.addPage(); renderLeaderboard(dummyDoc, 'honor');
+
+      sortedContentMods.forEach((d) => {
+         dummyDoc.addPage();
+         tempPageMap.set(d.mod.id, dummyDoc.internal.getNumberOfPages()); 
+         renderMod(dummyDoc, d);
+      });
+
+      const realDoc = new jsPDF();
+      
+      renderIndex(realDoc, tempPageMap);
+      realDoc.addPage(); renderLeaderboard(realDoc, 'points', tempPageMap);
+      realDoc.addPage(); renderLeaderboard(realDoc, 'pe', tempPageMap);
+      realDoc.addPage(); renderLeaderboard(realDoc, 'honor', tempPageMap);
+      
+      sortedContentMods.forEach((d) => {
+         realDoc.addPage();
+         renderMod(realDoc, d);
+      });
+      
+      realDoc.save('Master_Directory_Report.pdf');
+
+    } catch (e) {
+      console.error(e);
+      alert('Failed to generate full PDF report');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const handleAddMod = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -519,6 +832,14 @@ export function ModList() {
                       >
                         <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                         <span>Add Moderator</span>
+                      </button>
+                      <button 
+                        onClick={() => { handleDownloadFullPDF(); setShowHeaderMenu(false); }}
+                        disabled={isGeneratingPDF}
+                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 mt-4 px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full disabled:opacity-50"
+                      >
+                        <Download className="w-10 h-10 sm:w-12 sm:h-12" />
+                        <span>{isGeneratingPDF ? 'Compiling...' : 'Master Directory PDF'}</span>
                       </button>
                     </div>
                   )}
