@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useDeferredValue, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue, useCallback, useTransition } from 'react';
 import { collection, collectionGroup, onSnapshot, query, orderBy, doc, setDoc, where, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Mod, handleFirestoreError, OperationType } from '../types';
@@ -16,136 +16,120 @@ import { saveAs } from 'file-saver';
 
 type SortMode = 'ranking' | 'timeLeft';
 type ViewMode = 'active' | 'blacklisted';
+type RankingMetric = 'points' | 'efficiency' | 'honor' | 'deadline';
 
 const ModCardDetails = React.memo(({ 
   mod, 
-  officerRelationsMap, 
-  draftsMap, 
+  relations, 
+  draftsCount, 
   isAdmin, 
   handleStatusChange, 
   isCritical 
 }: { 
   mod: Mod, 
-  officerRelationsMap: Record<string, any[]>, 
-  draftsMap: Record<string, number>,
+  relations: any[], 
+  draftsCount: number,
   isAdmin: boolean,
   handleStatusChange: (id: string, s: 'active' | 'blacklisted') => void,
   isCritical: boolean
 }) => {
   return (
     <div className="flex flex-col md:flex-row border-t border-white/5 relative bg-black/20">
-      <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
+      <div className="p-4 sm:p-6 flex-1 flex flex-col justify-center text-center sm:text-left">
           <div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1">
-                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Entries</span>
-                <strong className="text-2xl text-white font-black">{mod.entryCount}</strong>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              <div className="bg-black/50 px-4 py-3 rounded-2xl border border-white/5 shadow-inner flex flex-col gap-1 items-center sm:items-start transition-all hover:bg-zinc-800/40">
+                <span className="text-zinc-600 text-[9px] uppercase tracking-[0.2em] font-black">Entries</span>
+                <strong className="text-xl text-white font-black">{mod.entryCount}</strong>
               </div>
-              {draftsMap[mod.id] > 0 && (
-                <div className="bg-indigo-500/10 px-5 py-4 rounded-3xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 animate-pulse">
-                  <span className="text-indigo-400 text-[10px] uppercase tracking-[0.2em] font-black">Drafts</span>
-                  <strong className="text-2xl text-indigo-300 font-black">{draftsMap[mod.id]}</strong>
+              {draftsCount > 0 && (
+                <div className="bg-indigo-500/10 px-4 py-3 rounded-2xl border border-indigo-500/20 shadow-inner flex flex-col gap-1 items-center sm:items-start animate-pulse">
+                  <span className="text-indigo-400 text-[9px] uppercase tracking-[0.2em] font-black">Drafts</span>
+                  <strong className="text-xl text-indigo-300 font-black">{draftsCount}</strong>
                 </div>
               )}
-              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Points</span>
-                <strong className="text-2xl text-amber-400 flex items-center gap-2 font-black">
-                  <Trophy className="w-5 h-5 text-amber-500" />
+              <div className="bg-black/50 px-4 py-3 rounded-2xl border border-white/5 flex flex-col gap-1 items-center sm:items-start shadow-inner transition-all hover:bg-zinc-800/40">
+                <span className="text-zinc-600 text-[9px] uppercase tracking-[0.2em] font-black">Points</span>
+                <strong className="text-xl text-amber-400 flex items-center gap-1.5 font-black">
+                  <Trophy className="w-4 h-4 text-amber-500" />
                   {mod.totalPoints || 0}
                 </strong>
               </div>
-              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">P/E Ratio</span>
-                <strong className="text-2xl text-purple-400 font-black">
+              <div className="bg-black/50 px-4 py-3 rounded-2xl border border-white/5 flex flex-col gap-1 items-center sm:items-start shadow-inner transition-all hover:bg-zinc-800/40">
+                <span className="text-zinc-600 text-[9px] uppercase tracking-[0.2em] font-black">P/E Ratio</span>
+                <strong className="text-xl text-purple-400 font-black">
                   {mod.entryCount > 0 ? ((mod.totalPoints || 0) / mod.entryCount).toFixed(2) : '0.00'}
                 </strong>
               </div>
-              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Honor</span>
-                <strong className="text-2xl text-emerald-400 font-black">
+              <div className="bg-black/50 px-4 py-3 rounded-2xl border border-white/5 flex flex-col gap-1 items-center sm:items-start shadow-inner transition-all hover:bg-zinc-800/40">
+                <span className="text-zinc-600 text-[9px] uppercase tracking-[0.2em] font-black">Honor</span>
+                <strong className="text-xl text-emerald-400 font-black">
                   {mod.honorScore ?? 100}
                 </strong>
-              </div>
-              <div className="bg-black/50 px-5 py-4 rounded-3xl border border-white/5 shadow-inner flex flex-col gap-1 col-span-full sm:col-span-1">
-                <span className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black">Active Since</span>
-                <strong className="text-lg text-white font-black truncate">{new Date(mod.lastEntryAt).toLocaleDateString()}</strong>
               </div>
             </div>
           </div>
           
-          {isAdmin && (
-            <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex gap-2">
-                 {mod.status === 'blacklisted' ? (
-                    <button 
-                      onClick={() => handleStatusChange(mod.id, 'active')}
-                      className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-emerald-600/30 active:scale-95 shadow-lg"
-                    >
-                      Re-Hire Member
-                    </button>
-                 ) : (
-                    <button 
-                      onClick={() => handleStatusChange(mod.id, 'blacklisted')}
-                      className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all border border-red-600/20 active:scale-95"
-                    >
-                      Move to Blacklist
-                    </button>
-                 )}
-              </div>
-            </div>
-          )}
-          <div className="mt-4 flex flex-row-reverse">
-            <Link 
-              to={`/mod/${mod.id}`}
-              className="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest px-6 py-2.5 bg-blue-400/5 rounded-xl border border-blue-400/10 hover:bg-blue-400/10 transition-all cursor-pointer inline-flex items-center"
-            >
-              Profile &rarr;
-            </Link>
+          <div className="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-4">
+             <Link 
+               to={`/mod/${mod.id}`}
+               className="text-blue-400 hover:text-blue-300 text-[9px] font-black uppercase tracking-widest px-5 py-2.5 bg-blue-400/5 rounded-xl border border-blue-400/10 hover:bg-blue-400/10 transition-all cursor-pointer inline-flex items-center"
+             >
+               Profile Detials &rarr;
+             </Link>
+
+             {isAdmin && (
+               <div className="flex gap-2">
+                  {mod.status === 'blacklisted' ? (
+                     <button 
+                       onClick={() => handleStatusChange(mod.id, 'active')}
+                       className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-emerald-600/20 active:scale-95"
+                     >
+                       Re-Hire Member
+                     </button>
+                  ) : (
+                     <button 
+                       onClick={() => handleStatusChange(mod.id, 'blacklisted')}
+                       className="bg-red-600/5 hover:bg-red-600 text-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-red-600/10 active:scale-95"
+                     >
+                       Move to Blacklist
+                     </button>
+                  )}
+               </div>
+             )}
           </div>
         </div>
         
-        <div className={`w-full md:w-[32rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
-          <div className={`flex-1 flex flex-col p-6 sm:p-8 ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
-            {mod.role !== 'officer' && (
-              <p className={`text-xs uppercase tracking-[0.3em] font-black mb-6 ${mod.status === 'blacklisted' ? 'text-zinc-600' : isCritical ? 'text-red-500' : 'text-zinc-500'} text-center`}>
-                {mod.status === 'blacklisted' ? 'Timer Suspended' : 'Time Remaining'}
+        <div className={`w-full md:w-[28rem] flex flex-col border-t md:border-t-0 md:border-l border-white/5 relative z-0 ${mod.status === 'blacklisted' ? 'bg-zinc-900/50 grayscale opacity-75' : mod.role === 'officer' ? 'bg-zinc-900/40' : isCritical ? 'bg-red-950/20' : 'bg-black/20'}`}>
+          <div className={`flex-1 flex flex-col p-4 sm:p-6 ${mod.role !== 'officer' ? 'items-center justify-center' : ''}`}>
+             <p className={`text-[10px] uppercase tracking-[0.3em] font-black mb-4 ${mod.status === 'blacklisted' ? 'text-zinc-600' : isCritical ? 'text-red-500' : 'text-zinc-500'} text-center`}>
+                {mod.role === 'officer' ? 'OFFICER UNITS' : mod.status === 'blacklisted' ? 'Timer Suspended' : 'MODERATOR CLOCK'}
               </p>
-            )}
-            <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-4'}`}>
+            <div className={`${mod.role !== 'officer' ? 'flex justify-center w-full' : 'flex flex-col gap-3'}`}>
               {mod.status === 'blacklisted' ? (
-                <div className="text-zinc-700 font-mono text-4xl font-black tracking-widest">--:--:--</div>
+                <div className="text-zinc-700 font-mono text-3xl font-black tracking-widest">00:00:00</div>
               ) : mod.role === 'officer' ? (
-                <div className="flex flex-col gap-3 w-full max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
-                   <p className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500 mb-2 px-1">Managed Units</p>
-                   <ol className="space-y-3 text-sm w-full">
-                     {(officerRelationsMap[mod.id] || []).map(m => (
-                       <li key={m.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
-                           <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-lg transition-colors truncate max-w-[180px]">
+                 <div className="flex flex-col gap-2 w-full max-h-[250px] overflow-y-auto custom-scrollbar pr-1 text-left">
+                   <ol className="space-y-2 text-sm w-full">
+                     {relations.map(m => (
+                       <li key={m.id} className="bg-black/40 border border-white/5 rounded-xl p-3 flex items-center justify-between hover:border-blue-500/30 transition-colors group/unit">
+                           <Link to={`/mod/${m.id}`} className="font-black text-white group-hover/unit:text-blue-400 text-base transition-colors truncate max-w-[140px]">
                              {m.name}
                            </Link>
-                           <div className="flex items-center gap-3 shrink-0">
-                             <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20" title="Points">
-                               <Trophy className="w-3.5 h-3.5" />
+                           <div className="flex items-center gap-2 shrink-0">
+                             <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-500 px-2 py-1 rounded-lg text-[10px] font-black border border-amber-500/20">
                                {m.totalPoints || 0}
                              </div>
-                             <div className="flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-xl text-xs font-black border border-purple-500/20" title="P/E Ratio">
-                               P/E {m.entryCount > 0 ? ((m.totalPoints || 0) / m.entryCount).toFixed(1) : '0.0'}
-                             </div>
-                             {draftsMap[m.id] > 0 && (
-                               <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-xl text-xs font-black border border-indigo-500/20 animate-pulse" title="Pending Drafts">
-                                 D {draftsMap[m.id]}
-                               </div>
-                             )}
-                             <span className="text-xs bg-zinc-900 px-3 py-1.5 rounded-xl text-zinc-400 font-mono border border-white/10 shadow-inner shrink-0">
+                             <span className="text-[10px] bg-zinc-900 px-2 py-1 rounded-lg text-zinc-400 font-mono border border-white/10 shrink-0">
                                <CountdownTimer deadlineAt={m.deadlineAt} compact />
                              </span>
                            </div>
                        </li>
                      ))}
                    </ol>
-                   {(!officerRelationsMap[mod.id] || officerRelationsMap[mod.id].length === 0) && (
-                      <div className="py-12 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center">
-                        <span className="text-sm text-zinc-600 font-bold uppercase tracking-widest">No Active Units</span>
+                   {relations.length === 0 && (
+                      <div className="py-8 bg-black/20 rounded-xl border border-dashed border-white/5 flex flex-col items-center justify-center">
+                        <span className="text-[10px] text-zinc-700 font-black uppercase tracking-widest">No Active Units</span>
                       </div>
                    )}
                 </div>
@@ -160,12 +144,14 @@ const ModCardDetails = React.memo(({
 });
 
 export function ModList() {
+  const [isPending, startTransition] = useTransition();
   const [mods, setMods] = useState<Mod[]>([]);
   const [entriesMap, setEntriesMap] = useState<Record<string, number>>({});
   const [draftsMap, setDraftsMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>('ranking');
   const [viewMode, setViewMode] = useState<ViewMode>('active');
+  const [rankingMetric, setRankingMetric] = useState<RankingMetric>('points');
   const { user, isAdmin, loading: authLoading, signIn, logOut } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -173,6 +159,7 @@ export function ModList() {
   const [newModName, setNewModName] = useState('');
   const [newModPhone, setNewModPhone] = useState('');
   const [newModGroup, setNewModGroup] = useState('Other');
+  const [newModGroups, setNewModGroups] = useState<string[]>(['Other']);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -396,7 +383,21 @@ export function ModList() {
         const children = [
           new Paragraph({ children: [new PageBreak()] }),
           new Paragraph({ text: mod.name.toUpperCase(), heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR (UNIT)', color: "71717A" })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ 
+            children: [
+              new TextRun({ 
+                text: mod.role?.toUpperCase() === 'OFFICER' ? 'OFFICER' : 'MODERATOR', 
+                color: "71717A" 
+              }),
+              ...(mod.role === 'officer' && (mod.groups || mod.group) ? [
+                new TextRun({ 
+                  text: ` | GROUPS: ${(mod.groups && mod.groups.length > 0 ? mod.groups.join(', ') : mod.group || 'OTHER').toUpperCase()}`,
+                  color: "71717A"
+                })
+              ] : [])
+            ], 
+            alignment: AlignmentType.CENTER 
+          }),
           new Paragraph({ text: "" }),
           new Paragraph({ children: [new TextRun({ text: `UNIQUE ID: ${mod.id?.slice(-12).toUpperCase()}`, bold: true })], alignment: AlignmentType.RIGHT }),
           new Paragraph({ children: [new TextRun({ text: `GENERATED AT: ${new Date().toLocaleString().toUpperCase()}` })], alignment: AlignmentType.RIGHT }),
@@ -554,7 +555,7 @@ export function ModList() {
         await setDoc(docRef, {
           name: newModName.trim(),
           phoneNumber: newModPhone.trim(),
-          ...(newModRole === 'officer' && { group: newModGroup }),
+          ...(newModRole === 'officer' && { groups: newModGroups, group: newModGroups[0] || 'Other' }),
           lastEntryAt: now,
           deadlineAt: now + 7 * 24 * 60 * 60 * 1000,
           createdAt: now,
@@ -619,6 +620,14 @@ export function ModList() {
 
   const now = Date.now();
 
+  const roleCounts = useMemo(() => {
+    const activeMods = mods.filter(m => (m.status || 'active') === viewMode);
+    return {
+      moderator: activeMods.filter(m => (m.role || 'moderator') === 'moderator').length,
+      officer: activeMods.filter(m => m.role === 'officer').length
+    };
+  }, [mods, viewMode]);
+
   const officerRelationsMap = useMemo(() => {
     const map: Record<string, any[]> = {};
     mods.forEach(m => {
@@ -659,25 +668,26 @@ export function ModList() {
       );
     }
     
-    if (sortMode === 'ranking') {
-      list.sort((a, b) => {
-        const pointsA = a.totalPoints || 0;
-        const pointsB = b.totalPoints || 0;
-        
-        if (pointsB !== pointsA) {
-          return pointsB - pointsA;
-        }
-        if (b.entryCount !== a.entryCount) {
-          return b.entryCount - a.entryCount;
-        }
+    list.sort((a, b) => {
+      if (rankingMetric === 'points') {
+        return (b.totalPoints || 0) - (a.totalPoints || 0);
+      }
+      if (rankingMetric === 'efficiency') {
+        const peA = a.entryCount > 0 ? (a.totalPoints || 0) / a.entryCount : 0;
+        const peB = b.entryCount > 0 ? (b.totalPoints || 0) / b.entryCount : 0;
+        return peB - peA || (b.totalPoints || 0) - (a.totalPoints || 0);
+      }
+      if (rankingMetric === 'honor') {
+        return (b.honorScore ?? 100) - (a.honorScore ?? 100);
+      }
+      if (rankingMetric === 'deadline') {
         return a.deadlineAt - b.deadlineAt;
-      });
-    } else {
-      list.sort((a, b) => b.deadlineAt - a.deadlineAt);
-    }
+      }
+      return 0;
+    });
     
     return list;
-  }, [mods, entriesMap, sortMode, viewMode, modRoleView, deferredSearchQuery]);
+  }, [mods, entriesMap, rankingMetric, viewMode, modRoleView, deferredSearchQuery]);
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
@@ -830,105 +840,107 @@ export function ModList() {
           </div>
         )}
 
-        <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 mb-8">
-          <div className="flex items-center p-2 bg-zinc-900 border border-white/5 rounded-[2.5rem] w-full shadow-xl shadow-black/40">
-             <button
-                onClick={() => setModRoleView('moderator')}
-                className={`flex-1 px-6 py-4 sm:py-5 rounded-[2rem] text-xl sm:text-2xl font-bold transition-all ${modRoleView === 'moderator' ? 'bg-blue-600 text-white shadow-lg scale-[1.01]' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
-             >
-                Moderators
-             </button>
-             <button
-                onClick={() => setModRoleView('officer')}
-                className={`flex-1 px-6 py-4 sm:py-5 rounded-[2rem] text-xl sm:text-2xl font-bold transition-all ${modRoleView === 'officer' ? 'bg-blue-600 text-white shadow-lg scale-[1.01]' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50 scale-100'}`}
-             >
-                Officers
-             </button>
+        <div className="w-full max-w-6xl mx-auto flex flex-col gap-8 mb-10">
+          {/* Advanced Search & Leaderboard Controls */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 p-4 bg-zinc-900 border border-white/5 rounded-[2.5rem] w-full shadow-2xl shadow-black/60 relative z-20">
+             {/* Search */}
+             <div className="relative flex-1 group">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+                <input 
+                  type="text"
+                  placeholder="Search members..."
+                  className="w-full bg-black/40 border border-white/5 rounded-3xl py-4 pl-16 pr-6 text-white text-lg placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+             </div>
+
+             {/* Metric Leaderboard Toggles */}
+             <div className="flex flex-wrap items-center gap-2 bg-black/40 p-2 rounded-3xl border border-white/5 min-w-fit">
+                {[
+                  { id: 'points', label: 'Points', icon: Trophy, color: 'text-amber-500' },
+                  { id: 'honor', label: 'Honor', icon: ShieldCheck, color: 'text-emerald-500' },
+                  { id: 'efficiency', label: 'P/E Leaderboard', icon: Filter, color: 'text-purple-400' },
+                  { id: 'deadline', label: 'Timer', icon: Clock, color: 'text-blue-400' }
+                ].map((metric) => (
+                  <button
+                    key={metric.id}
+                    onClick={() => setRankingMetric(metric.id as RankingMetric)}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      rankingMetric === metric.id 
+                      ? 'bg-zinc-800 text-white shadow-xl ring-1 ring-white/10' 
+                      : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    <metric.icon className={`w-4 h-4 ${rankingMetric === metric.id ? metric.color : 'text-current'}`} />
+                    <span className="whitespace-nowrap">{metric.label}</span>
+                  </button>
+                ))}
+             </div>
+
+             {/* View Mode & Extra Filters */}
+             <div className="flex items-center gap-2 bg-black/40 p-2 rounded-3xl border border-white/5 min-w-fit">
+                <button
+                  onClick={() => setViewMode('active')}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    viewMode === 'active' 
+                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' 
+                    : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${viewMode === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-700'}`} />
+                  Active
+                </button>
+                <button
+                  onClick={() => setViewMode('blacklisted')}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    viewMode === 'blacklisted' 
+                    ? 'bg-red-600/20 text-red-500 border border-red-500/30' 
+                    : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${viewMode === 'blacklisted' ? 'bg-red-500' : 'bg-zinc-700'}`} />
+                  Blacklist
+                </button>
+             </div>
           </div>
 
-          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-4 w-full">
-            <div className="relative w-full lg:flex-1">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Search member by name or number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-16 pr-6 py-4 sm:py-5 bg-zinc-900 border border-white/5 rounded-[2rem] text-lg sm:text-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-lg shadow-black/20 transition-all focus:bg-zinc-800/80 placeholder:text-zinc-500"
-              />
-            </div>
-            <div className="relative flex justify-end w-full lg:w-auto gap-4">
-              <button 
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center justify-center w-full lg:w-auto gap-4 px-8 py-4 sm:py-5 rounded-[2rem] bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all font-bold text-lg sm:text-xl shadow-lg shadow-black/20"
+          {/* Role Navigation */}
+          <div className="flex items-center justify-center gap-12 border-b border-white/5 pb-2">
+            {[
+              { id: 'moderator', label: 'MODERATORS', count: roleCounts.moderator },
+              { id: 'officer', label: 'OFFICERS', count: roleCounts.officer }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  startTransition(() => {
+                    setModRoleView(tab.id as 'moderator' | 'officer');
+                  });
+                }}
+                className="relative pb-4 group"
               >
-                <Filter className="w-6 h-6 text-blue-400" />
-                <span>Filters & Sort</span>
-                <ChevronDown className={`w-6 h-6 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-black uppercase tracking-[0.3em] transition-all ${modRoleView === tab.id ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+                    {tab.label}
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black transition-all ${modRoleView === tab.id ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-600'}`}>
+                    {tab.count}
+                  </span>
+                </div>
+                {modRoleView === tab.id && (
+                  <motion.div 
+                    layoutId="roleActiveLine"
+                    className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full"
+                  />
+                )}
               </button>
-
-              <AnimatePresence>
-                {showFilterDropdown && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-[20]" 
-                      onClick={() => setShowFilterDropdown(false)}
-                    ></div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ type: "spring", bounce: 0, duration: 0.25 }}
-                      style={{ willChange: "transform, opacity", transformOrigin: "top right" }}
-                      className="absolute right-0 mt-4 w-full sm:w-96 bg-zinc-900 border border-white/5 rounded-[2rem] shadow-2xl z-[30] p-4 transform-gpu"
-                    >
-                    {isAdmin && (
-                      <div className="mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-4 py-3">Status View</p>
-                        <button 
-                          onClick={() => { setViewMode('active'); setShowFilterDropdown(false); }}
-                          className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl transition-colors ${viewMode === 'active' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
-                        >
-                          <span className="flex items-center gap-4 font-bold text-xl sm:text-2xl">Active {modRoleView === 'moderator' ? 'Moderators' : 'Officers'}</span>
-                          {viewMode === 'active' && <Check className="w-8 h-8" />}
-                        </button>
-                        <button 
-                          onClick={() => { setViewMode('blacklisted'); setShowFilterDropdown(false); }}
-                          className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl font-bold transition-colors ${viewMode === 'blacklisted' ? 'bg-red-500/10 text-red-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
-                        >
-                          <span className="flex items-center gap-4 text-xl sm:text-2xl">Blacklisted</span>
-                          {viewMode === 'blacklisted' && <Check className="w-8 h-8" />}
-                        </button>
-                      </div>
-                    )}
-
-                    <div className={isAdmin ? "pt-4 border-t border-white/5/50" : ""}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-4 py-3">Sort By</p>
-                      <button 
-                        onClick={() => { setSortMode('ranking'); setShowFilterDropdown(false); }}
-                        className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl transition-colors ${sortMode === 'ranking' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
-                      >
-                        <span className="flex items-center gap-4 font-bold text-xl sm:text-2xl"><Trophy className="w-8 h-8" /> Ranking</span>
-                        {sortMode === 'ranking' && <Check className="w-8 h-8" />}
-                      </button>
-                      <button 
-                        onClick={() => { setSortMode('timeLeft'); setShowFilterDropdown(false); }}
-                        className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl transition-colors ${sortMode === 'timeLeft' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
-                      >
-                        <span className="flex items-center gap-4 font-bold text-xl sm:text-2xl"><Clock className="w-8 h-8" /> Time Left</span>
-                        {sortMode === 'timeLeft' && <Check className="w-8 h-8" />}
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+            ))}
           </div>
         </div>
 
         <div className="w-full max-w-6xl mx-auto pb-16">
-          {authLoading || (loading && mods.length === 0) ? (
+          {authLoading || (loading && mods.length === 0) || isPending ? (
             <div className="flex flex-col gap-4">
               <ModCardSkeleton />
               <ModCardSkeleton />
@@ -945,14 +957,19 @@ export function ModList() {
               const isWarning = mod.role === 'officer' ? false : timeLeft < 3 * 24 * 60 * 60 * 1000;
               const totalMs = 7 * 24 * 60 * 60 * 1000;
               const progress = mod.role === 'officer' ? 100 : Math.max(0, Math.min(100, (timeLeft / totalMs) * 100));
-              const isTopRank = sortMode === 'ranking' && index === 0 && mod.entryCount > 0;
+              const rank = (sortMode === 'ranking' && mod.entryCount > 0) ? index + 1 : null;
+              const isRanked = rank !== null && rank <= 3;
               const isExpanded = expandedModId === mod.id;
 
               return (
                     <motion.div 
                       key={mod.id}
                       layout
-                      className={`group bg-zinc-900 rounded-3xl border border-white/5 shadow-xl shadow-black/40 hover:border-blue-500/20 transition-all duration-300 flex flex-col overflow-hidden relative transform-gpu ${isTopRank ? 'ring-2 ring-blue-500/50 ring-offset-4 ring-offset-black' : ''}`}
+                      className={`group bg-zinc-900 rounded-3xl border border-white/5 shadow-xl shadow-black/40 hover:border-blue-500/20 transition-all duration-300 flex flex-col overflow-hidden relative transform-gpu ${
+                        rank === 1 ? 'ring-2 ring-blue-500/50 ring-offset-4 ring-offset-black' : 
+                        rank === 2 ? 'ring-2 ring-zinc-400/30 ring-offset-2 ring-offset-black' :
+                        rank === 3 ? 'ring-2 ring-amber-700/20 ring-offset-2 ring-offset-black' : ''
+                      }`}
                     >
                       
                       {/* Compact Header (Clickable) */}
@@ -965,7 +982,12 @@ export function ModList() {
                       className="flex items-center gap-3 sm:gap-4 overflow-hidden pr-2"
                     >
                         {sortMode === 'ranking' ? (
-                          <span className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${isTopRank ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-zinc-800 text-zinc-500'}`}>
+                          <span className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${
+                            rank === 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 
+                            rank === 2 ? 'bg-zinc-600 text-white shadow-lg shadow-zinc-500/20' :
+                            rank === 3 ? 'bg-amber-800 text-white shadow-lg shadow-amber-800/10' :
+                            'bg-zinc-800 text-zinc-500'
+                          }`}>
                             #{index + 1}
                           </span>
                         ) : (
@@ -976,7 +998,13 @@ export function ModList() {
                         <h3 className="font-black text-lg sm:text-2xl text-white truncate tracking-tight">
                           {mod.name}
                         </h3>
-                        {isTopRank && <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400 ml-1 drop-shadow-md shrink-0 block" />}
+                        {isRanked && (
+                          <Trophy className={`w-4 h-4 sm:w-6 sm:h-6 ml-1 drop-shadow-md shrink-0 block ${
+                            rank === 1 ? 'text-amber-400' : 
+                            rank === 2 ? 'text-zinc-300' : 
+                            'text-amber-600'
+                          }`} />
+                        )}
                     </motion.div>
                     
                     <div className="flex items-center gap-2 sm:gap-4 shrink-0">
@@ -1038,8 +1066,8 @@ export function ModList() {
                   >
                     <ModCardDetails 
                       mod={mod}
-                      officerRelationsMap={officerRelationsMap}
-                      draftsMap={draftsMap}
+                      relations={officerRelationsMap[mod.id] || []}
+                      draftsCount={draftsMap[mod.id] || 0}
                       isAdmin={isAdmin}
                       handleStatusChange={handleStatusChange}
                       isCritical={isCritical}
@@ -1055,9 +1083,12 @@ export function ModList() {
               
               rankedMods.forEach(mod => {
                 const sym = groupSymbols.find(s => mod.name.includes(s));
-                const key = mod.group || sym || 'Other';
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key].push(mod);
+                const targetGroups = mod.groups && mod.groups.length > 0 ? mod.groups : [mod.group || sym || 'Other'];
+                
+                targetGroups.forEach(key => {
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key].push(mod);
+                });
               });
 
               return (
@@ -1153,19 +1184,29 @@ export function ModList() {
                       />
                     </div>
                     {newModRole === 'officer' && (
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">Officer Group</label>
-                        <select
-                          className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
-                          value={newModGroup}
-                          onChange={(e) => setNewModGroup(e.target.value)}
-                        >
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-zinc-300 mb-3">Officer Groups (Select multiple)</label>
+                        <div className="grid grid-cols-3 gap-2 bg-black/40 p-4 rounded-xl border border-white/5">
                           {['Other', '.', '-', ':', '#', '$', '+', '/', '?'].map(group => (
-                            <option key={group} value={group}>
-                              {group === 'Other' ? 'None (Other)' : `Group ${group}`}
-                            </option>
+                            <label key={group} className="flex items-center gap-3 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={newModGroups.includes(group)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewModGroups(prev => [...prev, group]);
+                                  } else {
+                                    setNewModGroups(prev => prev.filter(g => g !== group));
+                                  }
+                                }}
+                                className="w-5 h-5 rounded border-white/10 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-black"
+                              />
+                              <span className="text-zinc-400 group-hover:text-white transition-colors text-sm">
+                                {group === 'Other' ? 'Other' : `Group ${group}`}
+                              </span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
                       </div>
                     )}
                   </div>

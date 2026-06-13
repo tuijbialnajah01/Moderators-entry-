@@ -20,7 +20,7 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
+              className="absolute inset-0 bg-black/90" 
               onClick={onClose}
             ></motion.div>
             <motion.div 
@@ -54,10 +54,10 @@ export const TermsModal = memo(({ show, onClose, roleView, onRoleViewChange }: T
                 </div>
               </div>
 
-              <div className="p-8 sm:p-12 overflow-y-auto flex-1 text-zinc-300 text-xl sm:text-2xl space-y-16 custom-scrollbar transform-gpu overscroll-contain scrolling-touch">
+              <div className="p-8 sm:p-12 overflow-y-auto flex-1 text-zinc-300 text-xl sm:text-2xl space-y-16 custom-scrollbar transform-gpu overscroll-contain scrolling-touch [will-change:scroll-position]">
                 {roleView === 'moderator' ? (
                   <>
-                    <div className="space-y-8">
+                    <div className="space-y-8 [contain:content]">
                       <div className="flex gap-5">
                         <span className="font-bold text-blue-400 text-3xl sm:text-4xl">1.</span>
                         <div className="space-y-10 pt-1 flex-1">

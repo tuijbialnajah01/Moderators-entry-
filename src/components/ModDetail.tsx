@@ -43,6 +43,7 @@ export function ModDetail() {
   const [editProfileName, setEditProfileName] = useState('');
   const [editProfilePhone, setEditProfilePhone] = useState('');
   const [editProfileGroup, setEditProfileGroup] = useState('');
+  const [editProfileGroups, setEditProfileGroups] = useState<string[]>([]);
   const [editProfileError, setEditProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -291,7 +292,13 @@ export function ModDetail() {
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'COMMANDING OFFICER' : 'SYSTEM MODERATOR', color: "71717A" })
+                new TextRun({ text: mod.role?.toUpperCase() === 'OFFICER' ? 'OFFICER' : 'MODERATOR', color: "71717A" }),
+                ...(mod.role === 'officer' && (mod.groups || mod.group) ? [
+                  new TextRun({ 
+                    text: ` | GROUPS: ${(mod.groups && mod.groups.length > 0 ? mod.groups.join(', ') : mod.group || 'OTHER').toUpperCase()}`,
+                    color: "71717A"
+                  })
+                ] : [])
               ],
               alignment: AlignmentType.CENTER,
             }),
@@ -636,7 +643,7 @@ export function ModDetail() {
       await updateDoc(doc(db, 'mods', id), { 
         name: editProfileName.trim(), 
         phoneNumber: editProfilePhone.trim(), 
-        ...(mod.role === 'officer' && { group: editProfileGroup }),
+        ...(mod.role === 'officer' && { groups: editProfileGroups, group: editProfileGroups[0] || 'Other' }),
         updatedAt: Date.now() 
       });
       setShowEditProfileModal(false);
@@ -966,12 +973,17 @@ export function ModDetail() {
           <div className="p-8 sm:p-12 flex-1 border-b md:border-b-0 md:border-r border-white/5 bg-gradient-to-br from-zinc-900 to-black">
             <div className="flex flex-col mb-8 gap-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                 <div className="flex items-center gap-4">
-                    <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none">{mod.name}</h2>
-                    {mod.status === 'blacklisted' && (
-                      <span className="bg-red-600/20 text-red-500 text-xs font-black uppercase px-4 py-1.5 rounded-xl border border-red-600/30 tracking-widest shadow-lg">Blacklisted</span>
-                    )}
-                 </div>
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none">{mod.name}</h2>
+                        <div className="flex flex-wrap gap-2">
+                          {mod.role === 'officer' && (mod.groups || [mod.group]).filter(Boolean).map(g => (
+                            <span key={g} className="bg-blue-600/20 text-blue-400 text-[10px] font-black uppercase px-3 py-1 rounded-lg border border-blue-600/30 tracking-widest">Group {g}</span>
+                          ))}
+                          {mod.status === 'blacklisted' && (
+                            <span className="bg-red-600/20 text-red-500 text-xs font-black uppercase px-4 py-1.5 rounded-xl border border-red-600/30 tracking-widest shadow-lg">Blacklisted</span>
+                          )}
+                        </div>
+                    </div>
                  {isAdmin && (
                      <div className="flex flex-wrap gap-3">
                       {mod.status === 'blacklisted' ? (
@@ -1014,6 +1026,7 @@ export function ModDetail() {
                           if (mod.role === 'officer') {
                             const groupSymbols = ['.', '-', ':', '#', '$', '+', '/', '?'];
                             const sym = groupSymbols.find(s => mod.name.includes(s));
+                            setEditProfileGroups(mod.groups && mod.groups.length > 0 ? mod.groups : [mod.group || sym || 'Other']);
                             setEditProfileGroup(mod.group || sym || 'Other');
                           }
                           setEditProfileError(''); 
@@ -1868,18 +1881,28 @@ export function ModDetail() {
                     </div>
                     {mod.role === 'officer' && (
                       <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">Officer Group</label>
-                        <select
-                          className="block w-full rounded-lg border-white/10 bg-black text-white shadow-lg shadow-black/20 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
-                          value={editProfileGroup}
-                          onChange={(e) => setEditProfileGroup(e.target.value)}
-                        >
+                        <label className="block text-sm font-medium text-zinc-300 mb-3">Officer Groups (Select multiple)</label>
+                        <div className="grid grid-cols-3 gap-2 bg-black/40 p-4 rounded-xl border border-white/5">
                           {['Other', '.', '-', ':', '#', '$', '+', '/', '?'].map(group => (
-                            <option key={group} value={group}>
-                              {group === 'Other' ? 'None (Other)' : `Group ${group}`}
-                            </option>
+                            <label key={group} className="flex items-center gap-3 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={editProfileGroups.includes(group)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditProfileGroups(prev => [...prev, group]);
+                                  } else {
+                                    setEditProfileGroups(prev => prev.filter(g => g !== group));
+                                  }
+                                }}
+                                className="w-5 h-5 rounded border-white/10 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-black"
+                              />
+                              <span className="text-zinc-400 group-hover:text-white transition-colors text-sm">
+                                {group === 'Other' ? 'Other' : `Group ${group}`}
+                              </span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
                       </div>
                     )}
                   </div>
