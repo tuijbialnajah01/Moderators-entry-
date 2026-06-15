@@ -39,6 +39,7 @@ import {
   Menu,
   Search,
   Download,
+  MessageCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -267,7 +268,46 @@ export function ModList() {
     "moderator",
   );
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isCopyingMentions, setIsCopyingMentions] = useState(false);
   const [expandedModId, setExpandedModId] = useState<string | null>(null);
+
+  const copyWhatsAppMentions = async () => {
+    const activeMods = mods.filter(
+      (m) => m.status !== "blacklisted" && m.phoneNumber,
+    );
+    if (activeMods.length === 0) {
+      alert("No active members with phone numbers found.");
+      return;
+    }
+
+    setIsCopyingMentions(true);
+    // WhatsApp format: @number. Note: Users usually need to paste these.
+    const mentions = activeMods
+      .map((m) => {
+        const clean = m.phoneNumber!.replace(/\D/g, "");
+        return `@${clean}`;
+      })
+      .join(" ");
+
+    const personalNumber = "917217660457";
+    const waUrl = `https://wa.me/${personalNumber}?text=${encodeURIComponent(
+      "MODERATOR TAG LIST:\n\n" + mentions,
+    )}`;
+
+    try {
+      await navigator.clipboard.writeText(mentions);
+      alert(
+        `READY: Mentions for ${activeMods.length} members processed!\n\nOpening WhatsApp with tags pre-filled... Just hit send to see them.`,
+      );
+      window.open(waUrl, "_blank");
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+      window.open(waUrl, "_blank");
+    } finally {
+      setIsCopyingMentions(false);
+      setShowHeaderMenu(false);
+    }
+  };
   const [offline, setOffline] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -1815,6 +1855,18 @@ export function ModList() {
                             {isGeneratingPDF
                               ? "Compiling..."
                               : "All Entries DOCX"}
+                          </span>
+                        </button>
+                        <button
+                          onClick={copyWhatsAppMentions}
+                          disabled={isCopyingMentions}
+                          className="bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/20 mt-4 px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full disabled:opacity-50"
+                        >
+                          <MessageCircle className="w-10 h-10 sm:w-12 sm:h-12" />
+                          <span>
+                            {isCopyingMentions
+                              ? "Processing..."
+                              : "WA Tagging (Open DM)"}
                           </span>
                         </button>
                       </div>
