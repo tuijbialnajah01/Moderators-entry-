@@ -271,7 +271,7 @@ export function ModList() {
   const [isCopyingMentions, setIsCopyingMentions] = useState(false);
   const [expandedModId, setExpandedModId] = useState<string | null>(null);
 
-  const copyWhatsAppMentions = async () => {
+  const startWhatsAppTagging = async () => {
     const activeMods = mods.filter(
       (m) => m.status !== "blacklisted" && m.phoneNumber,
     );
@@ -281,28 +281,44 @@ export function ModList() {
     }
 
     setIsCopyingMentions(true);
-    // WhatsApp format: @number. Note: Users usually need to paste these.
-    const mentions = activeMods
-      .map((m) => {
-        const clean = m.phoneNumber!.replace(/\D/g, "");
-        return `@${clean}`;
-      })
-      .join(" ");
+
+    const officers = activeMods.filter((m) => m.role === "officer");
+    const moderators = activeMods.filter((m) => m.role !== "officer");
+
+    let message = "🔱 OFFICERS LIST:\n";
+    if (officers.length > 0) {
+      message += officers
+        .map((m, idx) => {
+          const clean = m.phoneNumber!.replace(/\D/g, "");
+          return `${idx + 1}. ${m.name} - @${clean}`;
+        })
+        .join("\n");
+    } else {
+      message += "No active officers.";
+    }
+
+    message += "\n\n🛡️ MODERATORS LIST:\n";
+    if (moderators.length > 0) {
+      message += moderators
+        .map((m, idx) => {
+          const clean = m.phoneNumber!.replace(/\D/g, "");
+          return `${idx + 1}. ${m.name} - @${clean}`;
+        })
+        .join("\n");
+    } else {
+      message += "No active moderators.";
+    }
 
     const personalNumber = "917217660457";
-    const waUrl = `https://wa.me/${personalNumber}?text=${encodeURIComponent(
-      "MODERATOR TAG LIST:\n\n" + mentions,
-    )}`;
+    const waUrl = `https://wa.me/${personalNumber}?text=${encodeURIComponent(message)}`;
 
     try {
-      await navigator.clipboard.writeText(mentions);
-      alert(
-        `READY: Mentions for ${activeMods.length} members processed!\n\nOpening WhatsApp with tags pre-filled... Just hit send to see them.`,
-      );
       window.open(waUrl, "_blank");
     } catch (err) {
-      console.error("Failed to copy: ", err);
-      window.open(waUrl, "_blank");
+      console.error("Failed to open WhatsApp: ", err);
+      alert(
+        "Could not open WhatsApp automatically. Please check your popup blocker.",
+      );
     } finally {
       setIsCopyingMentions(false);
       setShowHeaderMenu(false);
@@ -1858,15 +1874,13 @@ export function ModList() {
                           </span>
                         </button>
                         <button
-                          onClick={copyWhatsAppMentions}
+                          onClick={startWhatsAppTagging}
                           disabled={isCopyingMentions}
                           className="bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/20 mt-4 px-6 py-5 sm:px-8 sm:py-6 rounded-3xl text-2xl sm:text-3xl font-bold flex items-center gap-5 transition-colors shadow-lg shadow-black/20 w-full disabled:opacity-50"
                         >
                           <MessageCircle className="w-10 h-10 sm:w-12 sm:h-12" />
                           <span>
-                            {isCopyingMentions
-                              ? "Processing..."
-                              : "WA Tagging (Open DM)"}
+                            {isCopyingMentions ? "Processing..." : "Tag"}
                           </span>
                         </button>
                       </div>
