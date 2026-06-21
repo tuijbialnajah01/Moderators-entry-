@@ -40,6 +40,7 @@ import {
   Search,
   Download,
   MessageCircle,
+  Box,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -230,6 +231,8 @@ const ModCardDetails = React.memo(
   },
 );
 
+import { WhatsAppPairing } from "./WhatsAppPairing";
+
 export function ModList() {
   const [isPending, startTransition] = useTransition();
   const [mods, setMods] = useState<Mod[]>([]);
@@ -242,6 +245,7 @@ export function ModList() {
   const { user, isAdmin, loading: authLoading, signIn, logOut } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [newModName, setNewModName] = useState("");
   const [newModPhone, setNewModPhone] = useState("");
@@ -1793,16 +1797,30 @@ export function ModList() {
                     className="absolute right-0 top-full mt-6 w-96 sm:w-[450px] bg-zinc-950 border border-white/10 rounded-[2.5rem] shadow-2xl z-[100] p-6 flex flex-col gap-6 isolate"
                   >
                     {user ? (
-                      <button
-                        onClick={() => {
-                          logOut();
-                          setShowHeaderMenu(false);
-                        }}
-                        className="flex items-center gap-5 px-6 py-5 sm:px-8 sm:py-6 text-2xl sm:text-3xl font-bold rounded-3xl bg-zinc-800/60 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full border border-transparent hover:border-red-500/30"
-                      >
-                        <LogOut className="w-10 h-10 sm:w-12 sm:h-12" />
-                        <span>Logout</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            logOut();
+                            setShowHeaderMenu(false);
+                          }}
+                          className="flex items-center gap-5 px-6 py-5 sm:px-8 sm:py-6 text-2xl sm:text-3xl font-bold rounded-3xl bg-zinc-800/60 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-all w-full border border-transparent hover:border-red-500/30"
+                        >
+                          <LogOut className="w-10 h-10 sm:w-12 sm:h-12" />
+                          <span>Logout</span>
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              setShowWhatsAppModal(true);
+                              setShowHeaderMenu(false);
+                            }}
+                            className="flex items-center gap-5 px-6 py-5 sm:px-8 sm:py-6 text-2xl sm:text-3xl font-bold rounded-3xl bg-zinc-800/60 text-emerald-400 hover:bg-emerald-500/10 transition-all w-full border border-transparent hover:border-emerald-500/30 mt-4"
+                          >
+                            <Box className="w-10 h-10 sm:w-12 sm:h-12" />
+                            <span>WhatsApp Bot</span>
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <button
                         onClick={() => {
@@ -2449,6 +2467,33 @@ export function ModList() {
         roleView={termsRoleView}
         onRoleViewChange={setTermsRoleView}
       />
+      <AnimatePresence>
+        {showWhatsAppModal && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setShowWhatsAppModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <WhatsAppPairing />
+              <button
+                onClick={() => setShowWhatsAppModal(false)}
+                className="mt-6 w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

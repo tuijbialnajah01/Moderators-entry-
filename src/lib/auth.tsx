@@ -19,7 +19,6 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 const ADMIN_EMAILS = [
-  'tuijbialnajah@gamil.com',
   'tuijbialnajah@gmail.com',
   'nadiaparveen1526@gmail.com',
   'pintrestk11@gmail.com',
@@ -48,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
-  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, signIn, logOut }}>
