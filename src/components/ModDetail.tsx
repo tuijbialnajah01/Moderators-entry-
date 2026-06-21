@@ -982,28 +982,30 @@ export function ModDetail() {
           <div className="p-8 sm:p-12 flex-1 border-b md:border-b-0 md:border-r border-white/5 bg-gradient-to-br from-zinc-900 to-black">
             <div className="flex flex-col mb-8 gap-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-8 sm:gap-10">
                         {mod.avatarUrl && (
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-2xl">
+                          <div className="w-40 h-40 sm:w-56 sm:h-56 rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden shrink-0 border-4 border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]">
                             <img 
                               src={mod.avatarUrl} 
                               alt={mod.name} 
                               className="w-full h-full object-cover shadow-2xl"
                               referrerPolicy="no-referrer"
                               onError={(e) => {
-                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true`;
+                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true&size=512`;
                               }}
                             />
                           </div>
                         )}
-                        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none">{mod.name}</h2>
-                        <div className="flex flex-wrap gap-2">
-                          {mod.role === 'officer' && (mod.groups || [mod.group]).filter(Boolean).map(g => (
-                            <span key={g} className="bg-blue-600/20 text-blue-400 text-[10px] font-black uppercase px-3 py-1 rounded-lg border border-blue-600/30 tracking-widest">Group {g}</span>
-                          ))}
-                          {mod.status === 'blacklisted' && (
-                            <span className="bg-red-600/20 text-red-500 text-xs font-black uppercase px-4 py-1.5 rounded-xl border border-red-600/30 tracking-widest shadow-lg">Blacklisted</span>
-                          )}
+                        <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-4">
+                           <h2 className="text-5xl sm:text-7xl lg:text-8xl font-black text-white tracking-tight leading-none mb-2">{mod.name}</h2>
+                           <div className="flex flex-wrap justify-center sm:justify-start gap-3">
+                              {mod.role === 'officer' && (mod.groups || [mod.group]).filter(Boolean).map(g => (
+                                <span key={g} className="bg-blue-600/20 text-blue-400 text-[10px] font-black uppercase px-3 py-1 rounded-lg border border-blue-600/30 tracking-widest">Group {g}</span>
+                              ))}
+                              {mod.status === 'blacklisted' && (
+                                <span className="bg-red-600/20 text-red-500 text-xs font-black uppercase px-4 py-1.5 rounded-xl border border-red-600/30 tracking-widest shadow-lg">Blacklisted</span>
+                              )}
+                           </div>
                         </div>
                     </div>
                  {isAdmin && (

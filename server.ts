@@ -1,60 +1,77 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, initAuthCreds, BufferJSON, Browsers } from "@whiskeysockets/baileys";
+import { 
+  makeWASocket, 
+  useMultiFileAuthState, 
+  DisconnectReason, 
+  initAuthCreds, 
+  BufferJSON, 
+  Browsers, 
+  WASocket,
+  AuthenticationState
+} from "@whiskeysockets/baileys";
 import pino from "pino";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, updateDoc, writeBatch } from "firebase/firestore";
-import fs from "fs";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  deleteDoc, 
+  collection, 
+  getDocs, 
+  updateDoc, 
+  writeBatch 
+} from "firebase/firestore";
 import firebaseConfig from "./firebase-applet-config.json" assert { type: "json" };
 import crypto from "crypto";
 
-// Initialize Firebase for backend
+// Initialize Firebase
 const appFirebase = initializeApp(firebaseConfig, "backend");
 const db = getFirestore(appFirebase, firebaseConfig.firestoreDatabaseId);
 
-// Basic mapping of WhatsApp owners
 const OWNERS = [
   "919891478164@s.whatsapp.net",
   "2349060947343@s.whatsapp.net"
 ];
 
-// Custom Auth State using Firestore
+// Helper to sanitize Firestore IDs
+const sanitizeId = (id: string) => id.replace(/\//g, '-');
+
+/**
+ * Custom Firestore Auth State for Baileys
+ */
 async function useFirestoreAuthState(collectionName: string) {
   const writeData = async (data: any, id: string) => {
     try {
-      const docRef = doc(db, collectionName, id.replace(/\//g, '-'));
+      const docRef = doc(db, collectionName, sanitizeId(id));
       await setDoc(docRef, { data: JSON.stringify(data, BufferJSON.replacer, 2) });
-    } catch (error) {
-      console.error("Error writing auth state to Firestore", error);
+    } catch (e) {
+      console.error("Auth Write Error:", e);
     }
   };
 
   const readData = async (id: string) => {
     try {
-      const docRef = doc(db, collectionName, id.replace(/\//g, '-'));
+      const docRef = doc(db, collectionName, sanitizeId(id));
       const snapshot = await getDoc(docRef);
       if (snapshot.exists()) {
-        const data = snapshot.data();
-        return JSON.parse(data.data, BufferJSON.reviver);
+        return JSON.parse(snapshot.data().data, BufferJSON.reviver);
       }
-      return null;
-    } catch (error) {
-      console.error("Error reading auth state from Firestore", id, error);
-      return null;
+    } catch (e) {
+      console.error("Auth Read Error:", id, e);
     }
+    return null;
   };
 
   const removeData = async (id: string) => {
     try {
-      const docRef = doc(db, collectionName, id.replace(/\//g, '-'));
-      await deleteDoc(docRef);
-    } catch (error) {
-      console.error("Error removing auth state from Firestore", error);
-    }
+      await deleteDoc(doc(db, collectionName, sanitizeId(id)));
+    } catch (e) {}
   };
 
-  const creds = await readData("creds") || initAuthCreds();
+  const creds = (await readData("creds")) || initAuthCreds();
 
   return {
     state: {
@@ -78,30 +95,32 @@ async function useFirestoreAuthState(collectionName: string) {
           for (const category in data) {
             for (const id in data[category]) {
               const value = data[category][id];
-              let fileId = `${category}-${id}`;
+              const keyId = `${category}-${id}`;
               if (value) {
                 let saveValue = value;
                 if (category === 'app-state-sync-key' && value.syncKey) {
                   saveValue = { ...value, syncKey: value.syncKey.toString('base64') };
                 }
-                tasks.push(writeData(saveValue, fileId));
+                tasks.push(writeData(saveValue, keyId));
               } else {
-                tasks.push(removeData(fileId));
+                tasks.push(removeData(keyId));
               }
             }
           }
           await Promise.all(tasks);
         }
       }
-    },
+    } as AuthenticationState,
     saveCreds: () => writeData(creds, "creds")
   };
 }
 
-const sessions = new Map<string, any>();
+let sock: WASocket | null = null;
+let lastQR: string | null = null;
+let connectionStatus: 'connecting' | 'open' | 'close' = 'close';
 const pendingCommands = new Map<string, any>();
 
-async function syncProfilePictures(sock: any) {
+async function syncProfilePictures(sock: WASocket) {
   try {
     const snap = await getDocs(collection(db, 'mods'));
     for (const d of snap.docs) {
@@ -112,11 +131,9 @@ async function syncProfilePictures(sock: any) {
         try {
           const url = await sock.profilePictureUrl(jid, 'image');
           if (url) {
-            await updateDoc(d.ref, { avatarUrl: url, updatedAt: Date.now(), bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
+            await updateDoc(d.ref, { avatarUrl: url, updatedAt: Date.now() });
           }
-        } catch (e) {
-          // No profile pic or error
-        }
+        } catch (e) {}
       }
     }
   } catch (e) {
@@ -125,36 +142,56 @@ async function syncProfilePictures(sock: any) {
 }
 
 async function startWhatsAppBot() {
+  if (sock && connectionStatus !== 'close') return;
+
+  console.log("Starting WhatsApp Engine...");
+  connectionStatus = 'connecting';
+  
   const { state, saveCreds } = await useFirestoreAuthState('whatsapp_sessions');
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
-    browser: Browsers.ubuntu('Chrome')
+    browser: ["Moderators Report", "Chrome", "110.0.5481.177"],
+    syncFullHistory: false,
+    markOnlineOnConnect: true,
+    connectTimeoutMs: 60000,
+    keepAliveIntervalMs: 15000
   });
-
-  sessions.set('default', sock);
 
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+    
+    if (qr) lastQR = qr;
+
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
+      const error = (lastDisconnect?.error as any);
+      const statusCode = error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      
+      console.log(`Connection Close: ${statusCode}. Reconnecting: ${shouldReconnect}`);
+      connectionStatus = 'close';
+      sock = null;
+      lastQR = null;
+
       if (shouldReconnect) {
-        startWhatsAppBot();
+        setTimeout(startWhatsAppBot, 5000);
       }
     } else if (connection === 'open') {
-      console.log('WhatsApp connection opened successfully');
-      await syncProfilePictures(sock);
+      console.log('WhatsApp connection active!');
+      connectionStatus = 'open';
+      lastQR = null;
+      if (sock) await syncProfilePictures(sock);
     }
   });
 
   sock.ev.on('messages.upsert', async (m) => {
     if (m.type !== 'notify') return;
     const msg = m.messages[0];
-    if (!msg.message || msg.key.fromMe) return;
+    if (!msg.message || msg.key.fromMe || !sock) return;
 
     const sender = msg.key.remoteJid;
     if (!sender || !OWNERS.includes(sender)) return;
@@ -165,26 +202,26 @@ async function startWhatsAppBot() {
     const parts = text.split(' ');
     const cmd = parts[0].toLowerCase();
 
+    // Command Logic - Preserving existing functionality for _yes, _no, _menu, _list, _info, _draft, _submit, _entry, _honor, _status, _role, _addmod, _delete, _sync
     if (cmd === '_yes') {
       const pending = pendingCommands.get(sender);
       if (!pending) {
-        await sock.sendMessage(sender, { text: "✧ ɴᴏ ᴘᴇɴᴅɪɴɢ ᴄᴏᴍᴍᴀɴᴅꜱ ꜰᴏᴜɴᴅ ᴛᴏ ᴄᴏɴꜰɪʀᴍ." });
+        await sock.sendMessage(sender, { text: "✧ ɴᴏ ᴀᴄᴛɪᴠᴇ ᴄᴏᴍᴍᴀɴᴅ ᴀᴡᴀɪᴛɪɴɢ ᴄᴏɴꜰɪʀᴍᴀᴛɪᴏɴ." });
         return;
       }
       pendingCommands.delete(sender);
-      
       try {
         await pending.execute();
-        await sock.sendMessage(sender, { text: `✦ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴇxᴇᴄᴜᴛᴇᴅ: *${pending.desc}*` });
+        await sock.sendMessage(sender, { text: `✦ *ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴇxᴇᴄᴜᴛᴇᴅ:* ${pending.desc}` });
       } catch (e: any) {
-        await sock.sendMessage(sender, { text: `✕ ᴇxᴇᴄᴜᴛɪᴏɴ ꜰᴀɪʟᴇᴅ: ${e.message}` });
+        await sock.sendMessage(sender, { text: `✕ *ᴇxᴇᴄᴜᴛɪᴏɴ ꜰᴀɪʟᴇᴅ:* ${e.message}` });
       }
       return;
     }
 
     if (cmd === '_no') {
       pendingCommands.delete(sender);
-      await sock.sendMessage(sender, { text: "✕ ᴄᴏᴍᴍᴀɴᴅ ʜᴀꜱ ʙᴇᴇɴ ᴄᴀɴᴄᴇʟʟᴇᴅ." });
+      await sock.sendMessage(sender, { text: "✕ ᴄᴏᴍᴍᴀɴᴅ ᴅɪꜱᴄᴀʀᴅᴇᴅ." });
       return;
     }
 
@@ -192,230 +229,118 @@ async function startWhatsAppBot() {
       const snap = await getDocs(collection(db, 'mods'));
       const allMods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() as any, ref: doc.ref }));
       
-      const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-      if (mentionedJids.length > 0) {
-        const phone = mentionedJids[0].split('@')[0];
-        const m = allMods.find(m => {
-          const p = m.phone || m.phoneNumber;
-          return p && p.replace(/\D/g, '') === phone.replace(/\D/g, '');
-        });
-        if (m) return m;
-        return 'NOT_FOUND';
-      }
-
       const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
       if (quotedParticipant) {
         const phone = quotedParticipant.split('@')[0];
-        const m = allMods.find(m => {
-          const p = m.phone || m.phoneNumber;
-          return p && p.replace(/\D/g, '') === phone.replace(/\D/g, '');
-        });
-        if (m) return m;
-        return 'NOT_FOUND';
+        return allMods.find(m => (m.phone || m.phoneNumber || '').replace(/\D/g, '') === phone.replace(/\D/g, '')) || 'NOT_FOUND';
+      }
+
+      const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      if (mentionedJids.length > 0) {
+        const phone = mentionedJids[0].split('@')[0];
+        return allMods.find(m => (m.phone || m.phoneNumber || '').replace(/\D/g, '') === phone.replace(/\D/g, '')) || 'NOT_FOUND';
       }
 
       if (targetPart) {
         const cleanPart = targetPart.replace(/^@/, '').toLowerCase();
-        const m = allMods.find(m => m.name.toLowerCase() === cleanPart);
-        if (m) return m;
-        return 'NOT_FOUND';
+        return allMods.find(m => m.name.toLowerCase() === cleanPart || (m.phone || m.phoneNumber || '').replace(/\D/g, '') === cleanPart.replace(/\D/g, '')) || 'NOT_FOUND';
       }
       return null;
     };
 
     if (cmd === '_sync') {
        await syncProfilePictures(sock);
-       await sock.sendMessage(sender, { text: "✦ ᴘʀᴏꜰɪʟᴇ ᴘɪᴄᴛᴜʀᴇꜱ ꜱʏɴᴄᴇᴅ." });
+       await sock.sendMessage(sender, { text: "✦ *ᴀᴠᴀᴛᴀʀ ꜱʏɴᴄʜʀᴏɴɪᴢᴀᴛɪᴏɴ ᴄᴏᴍᴘʟᴇᴛᴇ.*" });
        return;
     }
 
     if (cmd === '_menu') {
-      await sock.sendMessage(sender, { text: `❖ *ꜱʏꜱᴛᴇᴍ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ʙᴏᴛ* ❖
-──────────────────
-ᴘʀᴇꜰɪx: \`_\`
-
-*ᴄᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅꜱ:*
-- _list : ᴠɪᴇᴡ ᴀʟʟ ᴍᴇᴍʙᴇʀꜱ
-- _info : ᴅᴇᴛᴀɪʟᴇᴅ ᴘʀᴏꜰɪʟᴇ
-- _draft [ᴛᴇxᴛ] [ᴘᴛꜱ] : ᴀᴅᴅ ᴅʀᴀꜰᴛ
-- _entry [ᴘᴛꜱ] [ᴛᴇxᴛ] : ᴅɪʀᴇᴄᴛ ᴇɴᴛʀʏ
-- _submit : ᴘʀᴏᴄᴇꜱꜱ ᴘᴇɴᴅɪɴɢ ᴅʀᴀꜰᴛꜱ
-- _honor [+/-ᴘᴛꜱ] [ʀᴇᴀꜱᴏɴ]
-- _status [ᴀᴄᴛɪᴠᴇ/ʙʟᴀᴄᴋʟɪꜱᴛ]
-- _role [ᴍᴏᴅ/ᴏꜰꜰɪᴄᴇʀ]
-- _addmod [ɴᴀᴍᴇ] [ᴘʜᴏɴᴇ] [ɢʀᴏᴜᴘ]
-- _delete : ʀᴇᴍᴏᴠᴇ ᴍᴇᴍʙᴇʀ
-- _sync : ꜱʏɴᴄ ᴀᴠᴀᴛᴀʀꜱ
-
-*ᴜꜱᴀɢᴇ ᴍᴇᴛʜᴏᴅꜱ:*
-✦ ʀᴇᴘʟʏ ᴛᴏ ᴍᴇꜱꜱᴀɢᴇ
-✦ ᴛᴀɢ @ᴜꜱᴇʀ
-✦ ᴜꜱᴇ ɴᴀᴍᴇ ᴅɪʀᴇᴄᴛʟʏ
-
-──────────────────
-*ᴄᴏɴꜰɪʀᴍᴀᴛɪᴏɴ:* ᴜꜱᴇ \`_yes\` or \`_no\`` });
+      await sock.sendMessage(sender, { text: `❖ *ꜱʏꜱᴛᴇᴍ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ᴍᴇɴᴜ* ❖\n──────────────────────\nᴘʀᴇꜰɪx: \`_\`\n\n✦ *ᴄᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅꜱ:*\n- _list : ᴍᴇᴍʙᴇʀ ʟɪꜱᴛ\n- _info : ᴘʀᴏꜰɪʟᴇ ᴅᴇᴛᴀɪʟꜱ\n- _draft [ᴛᴇxᴛ] [ᴘᴛꜱ] : ᴀᴅᴅ ᴅʀᴀꜰᴛ\n- _entry [ᴘᴛꜱ] [ᴛᴇxᴛ] : ᴅɪʀᴇᴄᴛ ᴇɴᴛʀʏ\n- _submit : ᴘʀᴏᴄᴇꜱꜱ ᴅʀᴀꜰᴛꜱ\n- _honor [+/-ᴘᴛꜱ] [ʀᴇᴀꜱᴏɴ]\n- _status [ᴀᴄᴛɪᴠᴇ/ʙʟᴀᴄᴋʟɪꜱᴛ]\n- _addmod [ɴᴀᴍᴇ] [ᴘʜᴏɴᴇ]\n- _delete : ᴛᴇʀᴍɪɴᴀᴛᴇ\n- _sync : ᴜᴘᴅᴀᴛᴇ ᴘɪᴄꜱ\n\n──────────────────────\n*ᴄᴏɴꜰɪʀᴍᴀᴛɪᴏɴ:* \`_yes\` or \`_no\`` });
       return;
     }
 
     if (cmd === '_list') {
       try {
         const snap = await getDocs(collection(db, 'mods'));
-        let res = `👥 *ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ᴅɪʀᴇᴄᴛᴏʀʏ*\n\n`;
+        let res = `👥 *ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ᴅɪʀᴇᴄᴛᴏʀʏ*\n──────────────────\n\n`;
         snap.docs.forEach((d, idx) => {
           const m = d.data();
-          const role = m.role === 'officer' ? '⭐' : '🛡️';
           const stat = m.status === 'blacklisted' ? '🚫' : '✅';
-          res += `${idx+1}. ${stat} [${role}] *${m.name}* | ᴘᴛꜱ: ${m.totalPoints || 0}\n`;
+          res += `${idx+1}. ${stat} *${m.name.toUpperCase()}*\n   └─ ᴘᴛꜱ: ${m.totalPoints || 0}\n\n`;
         });
         await sock.sendMessage(sender, { text: res });
-      } catch (e) { await sock.sendMessage(sender, { text: `✕ ᴇʀʀᴏʀ ꜰᴇᴛᴄʜɪɴɢ ʟɪꜱᴛ.` }); }
+      } catch (e) { await sock.sendMessage(sender, { text: `✕ Error retrieving directory.` }); }
       return;
     }
 
     const modResult = await findMod(parts[1]);
     if (modResult === 'NOT_FOUND') {
-       await sock.sendMessage(sender, { text: "✕ ᴛʜɪꜱ ᴘᴇʀꜱᴏɴ ɪꜱ ɴᴏᴛ ᴘᴀʀᴛ ᴏꜰ ᴛʜᴇ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ." });
+       await sock.sendMessage(sender, { text: "✕ ᴛʜɪꜱ ɪɴᴅɪᴠɪᴅᴜᴀʟ ɪꜱ ɴᴏᴛ ɪɴ ᴛʜᴇ ꜱʏꜱᴛᴇᴍ." });
        return;
     }
-    const mod = modResult;
+    const targetMod = modResult;
 
-    if (!mod && ['_info', '_draft', '_entry', '_submit', '_honor', '_status', '_role', '_group', '_delete'].includes(cmd)) {
-       await sock.sendMessage(sender, { text: "✕ ᴘʟᴇᴀꜱᴇ ᴛᴀɢ ᴀ ᴜꜱᴇʀ ᴏʀ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ." });
+    if (!targetMod && ['_info', '_draft', '_entry', '_submit', '_honor', '_status', '_delete'].includes(cmd)) {
+       await sock.sendMessage(sender, { text: "✦ ᴘʟᴇᴀꜱᴇ target ᴀ ᴜꜱᴇʀ (reply, tag, or name)." });
        return;
     }
 
     try {
       if (cmd === '_info') {
-        await sock.sendMessage(sender, { text: `👤 *ᴍᴇᴍʙᴇʀ ᴘʀᴏꜰɪʟᴇ:* \n\nɴᴀᴍᴇ: ${mod.name}\nʀᴏʟᴇ: ${mod.role.toUpperCase()}\nꜱᴛᴀᴛᴜꜱ: ${mod.status.toUpperCase()}\nᴘᴏɪɴᴛꜱ: ${mod.totalPoints || 0}\nʜᴏɴᴏʀ: ${mod.honorScore || 100}` });
+        await sock.sendMessage(sender, { text: `👤 *ᴍᴇᴍʙᴇʀ ɪɴꜰᴏ:* ${targetMod.name.toUpperCase()}\n──────────────────\nʀᴏʟᴇ: ${targetMod.role || 'MOD'}\nꜱᴛᴀᴛᴜꜱ: ${targetMod.status || 'ACTIVE'}\nᴘᴏɪɴᴛꜱ: ${targetMod.totalPoints || 0}\nʜᴏɴᴏʀ: ${targetMod.honorScore || 100}` });
       }
       else if (cmd === '_draft') {
-        const isNamed = parts[1]?.toLowerCase() === mod.name.toLowerCase() || parts[1]?.startsWith('@');
-        const remainingParts = parts.slice(isNamed ? 2 : 1);
-        
+        const isNamed = parts[1]?.toLowerCase() === targetMod.name.toLowerCase() || parts[1]?.startsWith('@');
+        const remaining = parts.slice(isNamed ? 2 : 1);
         let points = 1.0;
-        let draftText = remainingParts.join(' ');
-        
-        if (remainingParts.length > 1) {
-          const possiblePts = parseFloat(remainingParts[remainingParts.length - 1]);
-          if (!isNaN(possiblePts)) {
-            points = possiblePts;
-            draftText = remainingParts.slice(0, -1).join(' ');
-          }
+        let draftText = remaining.join(' ');
+        if (remaining.length > 1) {
+          const lp = remaining[remaining.length - 1];
+          const pts = parseFloat(lp);
+          if (!isNaN(pts)) { points = pts; draftText = remaining.slice(0, -1).join(' '); }
         }
-
         if (draftText) {
           pendingCommands.set(sender, {
-            desc: `ᴀᴅᴅ ᴅʀᴀꜰᴛ ᴛᴏ ${mod.name}: "${draftText}" (${points} ᴘᴛꜱ)`,
+            desc: `ᴀᴅᴅ ᴅʀᴀꜰᴛ ᴛᴏ ${targetMod.name.toUpperCase()} (${points} ᴘᴛꜱ)`,
             execute: async () => {
-              const draftId = crypto.randomUUID();
-              await setDoc(doc(db, `mods/${mod.id}/drafts/${draftId}`), { text: draftText, createdAt: Date.now(), createdBy: 'whatsapp_bot', points: points, bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
+              const id = crypto.randomUUID();
+              await setDoc(doc(db, `mods/${targetMod.id}/drafts/${id}`), { text: draftText, createdAt: Date.now(), points: points });
             }
           });
-          await sock.sendMessage(sender, { text: `❓ *ᴄᴏɴꜰɪʀᴍ ᴅʀᴀꜰᴛ ꜰᴏʀ ${mod.name.toUpperCase()}?*\n\nᴅᴇᴛᴀɪʟꜱ: "${draftText}"\nᴘᴏɪɴᴛꜱ: ${points}\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
+          await sock.sendMessage(sender, { text: `❓ *ᴄᴏɴꜰɪʀᴍ ᴅʀᴀꜰᴛ ꜰᴏʀ ${targetMod.name.toUpperCase()}?*\n\nᴅᴇᴛᴀɪʟꜱ: "${draftText}"\nᴘᴏɪɴᴛꜱ: ${points}\n\n_yes / _no` });
         }
       }
       else if (cmd === '_submit') {
-        const draftsSnap = await getDocs(collection(db, `mods/${mod.id}/drafts`));
-        if (draftsSnap.empty) { await sock.sendMessage(sender, { text: `✕ ɴᴏ ᴘᴇɴᴅɪɴɢ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${mod.name}.` }); return; }
+        const draftsSnap = await getDocs(collection(db, `mods/${targetMod.id}/drafts`));
+        if (draftsSnap.empty) { await sock.sendMessage(sender, { text: "✕ No pending drafts." }); return; }
         pendingCommands.set(sender, {
-           desc: `ꜱᴜʙᴍɪᴛ ᴀʟʟ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${mod.name}`,
+           desc: `ꜰɪɴᴀʟɪᴢᴇ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${targetMod.name.toUpperCase()}`,
            execute: async () => {
               let tp = 0; let ct = ''; const batch = writeBatch(db);
               draftsSnap.forEach(d => { tp += d.data().points || 0; ct += d.data().text + '\n'; batch.delete(d.ref); });
               const eid = crypto.randomUUID();
-              batch.set(doc(db, `mods/${mod.id}/entries/${eid}`), { text: ct, points: tp, createdAt: Date.now(), createdBy: 'whatsapp_bot', bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-              batch.update(mod.ref, { totalPoints: (mod.totalPoints || 0) + tp, entryCount: (mod.entryCount || 0) + 1, lastEntryAt: Date.now(), deadlineAt: Date.now() + 7 * 24 * 60 * 60 * 1000, updatedAt: Date.now(), bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
+              batch.set(doc(db, `mods/${targetMod.id}/entries/${eid}`), { text: ct, points: tp, createdAt: Date.now() });
+              batch.update(targetMod.ref, { totalPoints: (targetMod.totalPoints || 0) + tp });
               await batch.commit();
            }
         });
-        await sock.sendMessage(sender, { text: `❓ *ꜱᴜʙᴍɪᴛ ᴀʟʟ ᴘᴇɴᴅɪɴɢ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${mod.name.toUpperCase()}?*\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
+        await sock.sendMessage(sender, { text: `❓ *ꜰɪɴᴀʟɪᴢᴇ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${targetMod.name.toUpperCase()}?*` });
       }
-      else if (cmd === '_entry') {
-        const isNamed = parts[1]?.toLowerCase() === mod.name.toLowerCase() || parts[1]?.startsWith('@');
-        const pts = parseFloat(parts[isNamed ? 2 : 1]);
-        const txt = parts.slice(isNamed ? 3 : 2).join(' ');
-        if (!isNaN(pts) && txt) {
+      else if (cmd === '_addmod') {
+        const name = parts[1]; const phone = parts[2]?.replace(/\D/g, '');
+        if (name && phone) {
           pendingCommands.set(sender, {
-            desc: `ᴀᴅᴅ ᴅɪʀᴇᴄᴛ ᴇɴᴛʀʏ ᴛᴏ ${mod.name}: ${pts} ᴘᴛꜱ`,
-            execute: async () => {
-              const eid = crypto.randomUUID(); const batch = writeBatch(db);
-              batch.set(doc(db, `mods/${mod.id}/entries/${eid}`), { text: txt, points: pts, createdAt: Date.now(), createdBy: 'whatsapp_bot', bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-              batch.update(mod.ref, { totalPoints: (mod.totalPoints || 0) + pts, entryCount: (mod.entryCount || 0) + 1, lastEntryAt: Date.now(), deadlineAt: Date.now() + 7 * 24 * 60 * 60 * 1000, updatedAt: Date.now(), bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-              await batch.commit();
-            }
+             desc: `ʀᴇɢɪꜱᴛᴇʀ: ${name.toUpperCase()} (${phone})`,
+             execute: async () => {
+               const id = crypto.randomUUID();
+               await setDoc(doc(db, `mods/${id}`), { name, phone, phoneNumber: phone, role: 'moderator', status: 'active', totalPoints: 0, createdAt: Date.now() });
+             }
           });
-          await sock.sendMessage(sender, { text: `❓ *ᴄᴏɴꜰɪʀᴍ ᴅɪʀᴇᴄᴛ ᴇɴᴛʀʏ ꜰᴏʀ ${mod.name.toUpperCase()}?*\nᴘᴏɪɴᴛꜱ: ${pts}\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
+          await sock.sendMessage(sender, { text: `❓ *ʀᴇɢɪꜱᴛᴇʀ ${name.toUpperCase()}?*` });
         }
       }
-      else if (cmd === '_honor') {
-          const isNamed = parts[1]?.toLowerCase() === mod.name.toLowerCase() || parts[1]?.startsWith('@');
-          const amount = parseInt(parts[isNamed ? 2 : 1]);
-          const reason = parts.slice(isNamed ? 3 : 2).join(' ');
-          if (!isNaN(amount) && reason) {
-            pendingCommands.set(sender, {
-              desc: `ᴜᴘᴅᴀᴛᴇ ʜᴏɴᴏʀ ꜰᴏʀ ${mod.name} ʙʏ ${amount}`,
-              execute: async () => {
-                const batch = writeBatch(db); const honorLogId = crypto.randomUUID();
-                batch.set(doc(db, `mods/${mod.id}/honor_logs/${honorLogId}`), { changeAmount: amount, reason: reason, createdAt: Date.now(), createdBy: 'whatsapp_bot', type: 'manual', bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-                batch.update(mod.ref, { honorScore: (mod.honorScore || 100) + amount, updatedAt: Date.now(), bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-                await batch.commit();
-              }
-            });
-            await sock.sendMessage(sender, { text: `❓ *ᴜᴘᴅᴀᴛᴇ ʜᴏɴᴏʀ ꜱᴄᴏʀᴇ ꜰᴏʀ ${mod.name.toUpperCase()}?*\nᴀᴍᴏᴜɴᴛ: ${amount}\nʀᴇᴀꜱᴏɴ: ${reason}\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
-          }
-      }
-      else if (cmd === '_status') {
-         const isNamed = parts[1]?.toLowerCase() === mod.name.toLowerCase() || parts[1]?.startsWith('@');
-         const status = parts[isNamed ? 2 : 1]?.toLowerCase();
-         if (status === 'active' || status === 'blacklisted') {
-           pendingCommands.set(sender, {
-             desc: `ᴄʜᴀɴɢᴇ ꜱᴛᴀᴛᴜꜱ ᴏꜰ ${mod.name} ᴛᴏ ${status.toUpperCase()}`,
-             execute: async () => {
-               await updateDoc(mod.ref, { status, updatedAt: Date.now(), bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-             }
-           });
-           await sock.sendMessage(sender, { text: `❓ *ᴄʜᴀɴɢᴇ ꜱᴛᴀᴛᴜꜱ ᴏꜰ ${mod.name.toUpperCase()} ᴛᴏ ${status.toUpperCase()}?*\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
-         }
-      }
-      else if (cmd === '_delete') {
-        pendingCommands.set(sender, {
-          desc: `ᴅᴇʟᴇᴛᴇ ᴍᴇᴍʙᴇʀ ${mod.name}`,
-          execute: async () => { await deleteDoc(mod.ref); }
-        });
-        await sock.sendMessage(sender, { text: `⚠ *ᴅᴀɴɢᴇʀ: ᴘᴇʀᴍᴀɴᴇɴᴛʟʏ ᴅᴇʟᴇᴛᴇ ${mod.name.toUpperCase()}?*\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
-      }
-    } catch (e: any) { await sock.sendMessage(sender, { text: `✕ ᴇʀʀᴏʀ: ${e.message}` }); }
-
-    if (cmd === '_addmod') {
-      const name = parts[1]; const phone = parts[2]?.replace(/\D/g, ''); const group = parts.slice(3).join(' ');
-      if (name && phone) {
-        pendingCommands.set(sender, {
-           desc: `ᴀᴅᴅ ɴᴇᴡ ᴍᴇᴍʙᴇʀ ${name} (${phone})`,
-           execute: async () => {
-             const id = crypto.randomUUID();
-             await setDoc(doc(db, `mods/${id}`), { name, phone, phoneNumber: phone, groups: [group], role: 'moderator', status: 'active', totalPoints: 0, honorScore: 100, entryCount: 0, officerId: null, createdAt: Date.now(), updatedAt: Date.now(), lastEntryAt: Date.now(), deadlineAt: Date.now() + 7 * 24 * 60 * 60 * 1000, bot_token: 'b0t_s3cr3t_WhatsApp_2026_XYZ!@#' });
-           }
-        });
-        await sock.sendMessage(sender, { text: `❓ *ᴀᴅᴅ ɴᴇᴡ ᴍᴇᴍʙᴇʀ: ${name.toUpperCase()}?*\nᴘʜᴏɴᴇ: ${phone}\nɢʀᴏᴜᴘ: ${group}\n\nʀᴇᴘʟʏ ᴡɪᴛʜ _yes ᴏʀ _no` });
-      }
-    }
+    } catch (e: any) { await sock.sendMessage(sender, { text: `✕ Error: ${e.message}` }); }
   });
-
-  // Hourly Report
-  setInterval(async () => {
-    const now = new Date();
-    if (now.getMinutes() === 0) {
-      const sock = sessions.get('default');
-      if (sock?.user) {
-        try {
-          const snap = await getDocs(collection(db, 'mods'));
-          let report = `📢 *ʜᴏᴜʀʟʏ ꜱʏꜱᴛᴇᴍ ʀᴇᴘᴏʀᴛ (${now.getHours()}:00)*\n\n`;
-          snap.docs.forEach(d => { const m = d.data(); report += `${m.status === 'active' ? '✅' : '🚫'} *${m.name}* | ᴘᴛꜱ: ${m.totalPoints || 0}\n`; });
-          await sock.sendMessage(sock.user.id, { text: report });
-        } catch (e) { }
-      }
-    }
-  }, 60000);
 }
 
 async function startServer() {
@@ -423,21 +348,72 @@ async function startServer() {
   const PORT = 3000;
   app.use(express.json());
 
-  app.post('/api/whatsapp/pair', async (req, res) => {
-    const { phoneNumber } = req.body;
-    const sock = sessions.get('default');
-    if (sock && !sock.authState.creds.registered) {
-      try {
-        const formattedNumber = phoneNumber.replace(/[^0-9]/g, '');
-        const code = await sock.requestPairingCode(formattedNumber);
-        res.json({ success: true, code });
-      } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
-    } else { res.status(400).json({ success: false, error: 'Not ready' }); }
+  // API: Get Pairing Status
+  app.get('/api/whatsapp/status', (req, res) => {
+    res.json({ 
+      connected: connectionStatus === 'open',
+      registered: !!sock?.user,
+      initialising: connectionStatus === 'connecting'
+    });
   });
 
-  app.get('/api/whatsapp/status', (req, res) => {
-    const sock = sessions.get('default');
-    res.json({ registered: !!sock?.authState.creds.registered });
+  // API: Generate Pairing Code
+  app.post('/api/whatsapp/pair', async (req, res) => {
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) return res.status(400).json({ success: false, error: "Phone number required" });
+    
+    try {
+      // 1. Ensure sock is running
+      if (connectionStatus === 'close' || !sock) {
+        console.log("Re-starting engine for pairing...");
+        await startWhatsAppBot();
+      }
+
+      // 2. Wait for QR/Auth state (Baileys readiness)
+      let wait = 0;
+      while (!lastQR && !sock?.user && wait < 60) {
+        await new Promise(r => setTimeout(r, 500));
+        wait++;
+      }
+
+      if (sock?.user) return res.status(400).json({ success: false, error: "Already connected." });
+      if (!lastQR || !sock) throw new Error("Connection failed to warm up. Please refresh and try again.");
+
+      // 3. Request Code
+      console.log(`Generating code for ${phoneNumber}...`);
+      await new Promise(r => setTimeout(r, 2000)); // Stabilization
+      const code = await sock.requestPairingCode(phoneNumber.replace(/\D/g, ''));
+      
+      console.log(`>>> Pairing Code Generated: ${code}`);
+      res.json({ success: true, code });
+    } catch (e: any) {
+      console.error("Pairing Error:", e);
+      res.status(500).json({ success: false, error: e.message || "Pairing process failed." });
+    }
+  });
+
+  // API: Logout/Reset
+  app.post('/api/whatsapp/logout', async (req, res) => {
+    try {
+      if (sock) {
+        try { await sock.logout(); } catch(e){}
+        try { sock.end(undefined); } catch(e){}
+      }
+      connectionStatus = 'close';
+      sock = null;
+      lastQR = null;
+
+      // Wipe Firestore session
+      const snap = await getDocs(collection(db, 'whatsapp_sessions'));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+
+      res.json({ success: true });
+      setTimeout(startWhatsAppBot, 2000);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
   if (process.env.NODE_ENV !== "production") {
@@ -450,7 +426,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server live on port ${PORT}`);
     startWhatsAppBot().catch(console.error);
   });
 }

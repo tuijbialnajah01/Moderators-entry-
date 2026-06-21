@@ -2152,34 +2152,34 @@ export function ModList() {
                         className="flex items-center gap-3 sm:gap-4 overflow-hidden pr-2"
                       >
                         {mod.avatarUrl ? (
-                          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 border-2 border-white/10 shadow-2xl shadow-black/60 group-hover:border-blue-500/30 transition-colors">
+                          <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden shrink-0 border-4 border-white/10 shadow-2xl shadow-black/80 group-hover:border-blue-500/30 transition-all duration-300">
                             <img 
                               src={mod.avatarUrl} 
                               alt={mod.name} 
                               className="w-full h-full object-cover"
                               referrerPolicy="no-referrer"
                               onError={(e) => {
-                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true`;
+                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true&size=512`;
                               }}
                             />
                           </div>
                         ) : sortMode === "ranking" ? (
                           <span
-                            className={`w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${
+                            className={`w-32 h-32 sm:w-44 sm:h-44 flex items-center justify-center rounded-[2.5rem] sm:rounded-[3.5rem] font-black text-5xl sm:text-7xl shrink-0 ${
                               rank === 1
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                                ? "bg-blue-600 text-white shadow-xl shadow-blue-500/30"
                                 : rank === 2
-                                  ? "bg-zinc-600 text-white shadow-lg shadow-zinc-500/20"
-                                  : rank === 3
-                                    ? "bg-amber-800 text-white shadow-lg shadow-amber-800/10"
-                                    : "bg-zinc-800 text-zinc-500"
+                                ? "bg-zinc-600 text-white shadow-xl shadow-zinc-500/20"
+                                : rank === 3
+                                ? "bg-amber-800 text-white shadow-xl shadow-amber-800/10"
+                                : "bg-zinc-800 text-zinc-500 border border-white/5"
                             }`}
                           >
                             #{index + 1}
                           </span>
                         ) : (
-                          <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl sm:rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
-                            <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
+                          <div className="w-32 h-32 sm:w-44 sm:h-44 flex items-center justify-center rounded-[2.5rem] sm:rounded-[3.5rem] bg-zinc-800 text-zinc-500 shrink-0 border border-white/5">
+                            <Clock className="w-12 h-12 sm:w-16 sm:h-16" />
                           </div>
                         )}
                         <h3 className="font-black text-lg sm:text-2xl text-white truncate tracking-tight">
