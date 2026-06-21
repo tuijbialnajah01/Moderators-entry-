@@ -988,8 +988,11 @@ export function ModDetail() {
                             <img 
                               src={mod.avatarUrl} 
                               alt={mod.name} 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover shadow-2xl"
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true`;
+                              }}
                             />
                           </div>
                         )}

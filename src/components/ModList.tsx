@@ -2091,7 +2091,7 @@ export function ModList() {
           </div>
         </div>
 
-        <div className="w-full max-w-6xl mx-auto pb-16">
+        <div className="w-full max-w-7xl mx-auto pb-16">
           {authLoading || (loading && mods.length === 0) || isPending ? (
             <div className="flex flex-col gap-4">
               <ModCardSkeleton />
@@ -2152,17 +2152,20 @@ export function ModList() {
                         className="flex items-center gap-3 sm:gap-4 overflow-hidden pr-2"
                       >
                         {mod.avatarUrl ? (
-                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-lg shadow-black/50">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 border-2 border-white/10 shadow-2xl shadow-black/60 group-hover:border-blue-500/30 transition-colors">
                             <img 
                               src={mod.avatarUrl} 
                               alt={mod.name} 
                               className="w-full h-full object-cover"
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as any).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=18181b&color=71717a&bold=true`;
+                              }}
                             />
                           </div>
                         ) : sortMode === "ranking" ? (
                           <span
-                            className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${
+                            className={`w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${
                               rank === 1
                                 ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
                                 : rank === 2
@@ -2175,7 +2178,7 @@ export function ModList() {
                             #{index + 1}
                           </span>
                         ) : (
-                          <div className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl sm:rounded-2xl bg-zinc-800 text-zinc-500 shrink-0">
                             <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
                           </div>
                         )}
