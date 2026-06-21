@@ -144,22 +144,45 @@ const ModCardDetails = React.memo(
             </Link>
 
             {isAdmin && (
-              <div className="flex gap-2">
-                {mod.status === "blacklisted" ? (
-                  <button
-                    onClick={() => handleStatusChange(mod.id, "active")}
-                    className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-emerald-600/20 active:scale-95"
-                  >
-                    Re-Hire Member
-                  </button>
+              <div className="flex gap-2 items-center flex-wrap">
+                {mod.phoneNumber ? (
+                  <div className="flex items-center gap-2">
+                    <div className="px-5 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 font-mono text-[10px] border border-emerald-500/10 font-bold whitespace-nowrap">
+                      {mod.phoneNumber}
+                    </div>
+                    <a 
+                      href={`https://wa.me/${mod.phoneNumber.replace(/\D/g, '')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all border border-emerald-500/20 active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      Chat
+                    </a>
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => handleStatusChange(mod.id, "blacklisted")}
-                    className="bg-red-600/5 hover:bg-red-600 text-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-red-600/10 active:scale-95"
-                  >
-                    Move to Blacklist
-                  </button>
+                  <span className="px-5 py-2.5 rounded-xl bg-zinc-800/50 text-zinc-600 font-mono text-[9px] border border-white/5 uppercase font-black tracking-widest whitespace-nowrap">
+                    No Phone
+                  </span>
                 )}
+                
+                <div className="flex gap-2">
+                  {mod.status === "blacklisted" ? (
+                    <button
+                      onClick={() => handleStatusChange(mod.id, "active")}
+                      className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-emerald-600/20 active:scale-95 whitespace-nowrap"
+                    >
+                      Re-Hire Member
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStatusChange(mod.id, "blacklisted")}
+                      className="bg-red-600/5 hover:bg-red-600 text-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest px-5 py-2 rounded-xl transition-all border border-red-600/10 active:scale-95 whitespace-nowrap"
+                    >
+                      Move to Blacklist
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2128,7 +2151,16 @@ export function ModList() {
                         layout="position"
                         className="flex items-center gap-3 sm:gap-4 overflow-hidden pr-2"
                       >
-                        {sortMode === "ranking" ? (
+                        {mod.avatarUrl ? (
+                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-lg shadow-black/50">
+                            <img 
+                              src={mod.avatarUrl} 
+                              alt={mod.name} 
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        ) : sortMode === "ranking" ? (
                           <span
                             className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl font-black text-base sm:text-xl shrink-0 ${
                               rank === 1

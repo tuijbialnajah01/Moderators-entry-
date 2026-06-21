@@ -982,7 +982,17 @@ export function ModDetail() {
           <div className="p-8 sm:p-12 flex-1 border-b md:border-b-0 md:border-r border-white/5 bg-gradient-to-br from-zinc-900 to-black">
             <div className="flex flex-col mb-8 gap-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
+                        {mod.avatarUrl && (
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-2xl">
+                            <img 
+                              src={mod.avatarUrl} 
+                              alt={mod.name} 
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
                         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none">{mod.name}</h2>
                         <div className="flex flex-wrap gap-2">
                           {mod.role === 'officer' && (mod.groups || [mod.group]).filter(Boolean).map(g => (

@@ -2,6 +2,8 @@ export interface Mod {
   id: string;
   name: string;
   phoneNumber?: string;
+  phone?: string;
+  avatarUrl?: string;
   lastEntryAt: number;
   deadlineAt: number;
   createdAt: number;
