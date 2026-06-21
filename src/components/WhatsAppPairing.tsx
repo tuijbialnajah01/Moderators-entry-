@@ -208,12 +208,23 @@ export function WhatsAppPairing() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3"
+              className="mt-6 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl space-y-3"
             >
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-red-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">
-                {errorMsg}
-              </p>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-red-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                  {errorMsg}
+                </p>
+              </div>
+              
+              {errorMsg.toLowerCase().includes('connected') && (
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-red-500/30"
+                >
+                  Force Logout & Reset
+                </button>
+              )}
             </motion.div>
           )}
         </div>

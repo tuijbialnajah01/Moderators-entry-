@@ -3,13 +3,13 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { 
   makeWASocket, 
-  useMultiFileAuthState, 
   DisconnectReason, 
   initAuthCreds, 
   BufferJSON, 
   Browsers, 
   WASocket,
-  AuthenticationState
+  AuthenticationState,
+  fetchLatestBaileysVersion
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import { initializeApp } from "firebase/app";
@@ -28,7 +28,7 @@ import firebaseConfig from "./firebase-applet-config.json" assert { type: "json"
 import crypto from "crypto";
 
 // Initialize Firebase
-const appFirebase = initializeApp(firebaseConfig, "backend");
+const appFirebase = initializeApp(firebaseConfig, "backend-v2");
 const db = getFirestore(appFirebase, firebaseConfig.firestoreDatabaseId);
 
 const OWNERS = [
@@ -40,13 +40,15 @@ const OWNERS = [
 const sanitizeId = (id: string) => id.replace(/\//g, '-');
 
 /**
- * Custom Firestore Auth State for Baileys
+ * Enhanced Firestore Auth State for Baileys
+ * Correctly handles nested buffers and state clearing
  */
 async function useFirestoreAuthState(collectionName: string) {
   const writeData = async (data: any, id: string) => {
     try {
       const docRef = doc(db, collectionName, sanitizeId(id));
-      await setDoc(docRef, { data: JSON.stringify(data, BufferJSON.replacer, 2) });
+      const content = JSON.stringify(data, BufferJSON.replacer, 2);
+      await setDoc(docRef, { data: content, updatedAt: Date.now() });
     } catch (e) {
       console.error("Auth Write Error:", e);
     }
@@ -60,7 +62,7 @@ async function useFirestoreAuthState(collectionName: string) {
         return JSON.parse(snapshot.data().data, BufferJSON.reviver);
       }
     } catch (e) {
-      console.error("Auth Read Error:", id, e);
+      // console.error("Auth Read Error:", id, e);
     }
     return null;
   };
@@ -120,7 +122,7 @@ let lastQR: string | null = null;
 let connectionStatus: 'connecting' | 'open' | 'close' = 'close';
 const pendingCommands = new Map<string, any>();
 
-async function syncProfilePictures(sock: WASocket) {
+async function syncProfilePictures(s: WASocket) {
   try {
     const snap = await getDocs(collection(db, 'mods'));
     for (const d of snap.docs) {
@@ -129,7 +131,7 @@ async function syncProfilePictures(sock: WASocket) {
       if (p) {
         const jid = p.includes('@') ? p : `${p.replace(/\D/g, '')}@s.whatsapp.net`;
         try {
-          const url = await sock.profilePictureUrl(jid, 'image');
+          const url = await s.profilePictureUrl(jid, 'image');
           if (url) {
             await updateDoc(d.ref, { avatarUrl: url, updatedAt: Date.now() });
           }
@@ -144,20 +146,23 @@ async function syncProfilePictures(sock: WASocket) {
 async function startWhatsAppBot() {
   if (sock && connectionStatus !== 'close') return;
 
-  console.log("Starting WhatsApp Engine...");
+  console.log(">>> [BOT] Starting WhatsApp Engine...");
   connectionStatus = 'connecting';
   
-  const { state, saveCreds } = await useFirestoreAuthState('whatsapp_sessions');
+  const { state, saveCreds } = await useFirestoreAuthState('whatsapp_sessions_v2');
+  const { version } = await fetchLatestBaileysVersion();
 
   sock = makeWASocket({
+    version,
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
-    browser: ["Moderators Report", "Chrome", "110.0.5481.177"],
+    browser: ["Chrome (Linux)", "Chrome", "110.0.0.0"],
     syncFullHistory: false,
     markOnlineOnConnect: true,
     connectTimeoutMs: 60000,
-    keepAliveIntervalMs: 15000
+    keepAliveIntervalMs: 15000,
+    generateHighQualityLinkPreview: true
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -165,14 +170,17 @@ async function startWhatsAppBot() {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     
-    if (qr) lastQR = qr;
+    if (qr) {
+      lastQR = qr;
+      console.log('>>> [BOT] New Pair Request Ready');
+    }
 
     if (connection === 'close') {
       const error = (lastDisconnect?.error as any);
       const statusCode = error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       
-      console.log(`Connection Close: ${statusCode}. Reconnecting: ${shouldReconnect}`);
+      console.log(`>>> [BOT] Connection Closed [Code: ${statusCode}]. Reconnecting: ${shouldReconnect}`);
       connectionStatus = 'close';
       sock = null;
       lastQR = null;
@@ -181,7 +189,7 @@ async function startWhatsAppBot() {
         setTimeout(startWhatsAppBot, 5000);
       }
     } else if (connection === 'open') {
-      console.log('WhatsApp connection active!');
+      console.log('>>> [BOT] Connection Live!');
       connectionStatus = 'open';
       lastQR = null;
       if (sock) await syncProfilePictures(sock);
@@ -194,15 +202,21 @@ async function startWhatsAppBot() {
     if (!msg.message || msg.key.fromMe || !sock) return;
 
     const sender = msg.key.remoteJid;
-    if (!sender || !OWNERS.includes(sender)) return;
+    if (!sender) return;
 
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     if (!text.startsWith('_')) return;
 
+    if (!OWNERS.includes(sender)) {
+      // Optional: Inform non-owners they lack access
+      // await sock.sendMessage(sender, { text: "✕ Access Denied." });
+      return;
+    }
+
     const parts = text.split(' ');
     const cmd = parts[0].toLowerCase();
 
-    // Command Logic - Preserving existing functionality for _yes, _no, _menu, _list, _info, _draft, _submit, _entry, _honor, _status, _role, _addmod, _delete, _sync
+    // Command Logic
     if (cmd === '_yes') {
       const pending = pendingCommands.get(sender);
       if (!pending) {
@@ -287,7 +301,8 @@ async function startWhatsAppBot() {
 
     try {
       if (cmd === '_info') {
-        await sock.sendMessage(sender, { text: `👤 *ᴍᴇᴍʙᴇʀ ɪɴꜰᴏ:* ${targetMod.name.toUpperCase()}\n──────────────────\nʀᴏʟᴇ: ${targetMod.role || 'MOD'}\nꜱᴛᴀᴛᴜꜱ: ${targetMod.status || 'ACTIVE'}\nᴘᴏɪɴᴛꜱ: ${targetMod.totalPoints || 0}\nʜᴏɴᴏʀ: ${targetMod.honorScore || 100}` });
+        const m = targetMod;
+        await sock.sendMessage(sender, { text: `👤 *ᴍᴇᴍʙᴇʀ ɪɴꜰᴏ:* ${m.name.toUpperCase()}\n──────────────────\nʀᴏʟᴇ: ${m.role || 'MOD'}\nꜱᴛᴀᴛᴜꜱ: ${m.status || 'ACTIVE'}\nᴘᴏɪɴᴛꜱ: ${m.totalPoints || 0}\nʜᴏɴᴏʀ: ${m.honorScore || 100}` });
       }
       else if (cmd === '_draft') {
         const isNamed = parts[1]?.toLowerCase() === targetMod.name.toLowerCase() || parts[1]?.startsWith('@');
@@ -309,22 +324,6 @@ async function startWhatsAppBot() {
           });
           await sock.sendMessage(sender, { text: `❓ *ᴄᴏɴꜰɪʀᴍ ᴅʀᴀꜰᴛ ꜰᴏʀ ${targetMod.name.toUpperCase()}?*\n\nᴅᴇᴛᴀɪʟꜱ: "${draftText}"\nᴘᴏɪɴᴛꜱ: ${points}\n\n_yes / _no` });
         }
-      }
-      else if (cmd === '_submit') {
-        const draftsSnap = await getDocs(collection(db, `mods/${targetMod.id}/drafts`));
-        if (draftsSnap.empty) { await sock.sendMessage(sender, { text: "✕ No pending drafts." }); return; }
-        pendingCommands.set(sender, {
-           desc: `ꜰɪɴᴀʟɪᴢᴇ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${targetMod.name.toUpperCase()}`,
-           execute: async () => {
-              let tp = 0; let ct = ''; const batch = writeBatch(db);
-              draftsSnap.forEach(d => { tp += d.data().points || 0; ct += d.data().text + '\n'; batch.delete(d.ref); });
-              const eid = crypto.randomUUID();
-              batch.set(doc(db, `mods/${targetMod.id}/entries/${eid}`), { text: ct, points: tp, createdAt: Date.now() });
-              batch.update(targetMod.ref, { totalPoints: (targetMod.totalPoints || 0) + tp });
-              await batch.commit();
-           }
-        });
-        await sock.sendMessage(sender, { text: `❓ *ꜰɪɴᴀʟɪᴢᴇ ᴅʀᴀꜰᴛꜱ ꜰᴏʀ ${targetMod.name.toUpperCase()}?*` });
       }
       else if (cmd === '_addmod') {
         const name = parts[1]; const phone = parts[2]?.replace(/\D/g, '');
@@ -348,7 +347,7 @@ async function startServer() {
   const PORT = 3000;
   app.use(express.json());
 
-  // API: Get Pairing Status
+  // API Routes
   app.get('/api/whatsapp/status', (req, res) => {
     res.json({ 
       connected: connectionStatus === 'open',
@@ -357,61 +356,65 @@ async function startServer() {
     });
   });
 
-  // API: Generate Pairing Code
   app.post('/api/whatsapp/pair', async (req, res) => {
     const { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).json({ success: false, error: "Phone number required" });
-    
+    const formattedNumber = phoneNumber.replace(/\D/g, '');
+
     try {
-      // 1. Ensure sock is running
-      if (connectionStatus === 'close' || !sock) {
-        console.log("Re-starting engine for pairing...");
-        await startWhatsAppBot();
+      // 1. If connection found, checks if already logged in
+      if (sock?.user) return res.status(400).json({ success: false, error: "Already connected." });
+
+      // 2. Ensure engine is warming up
+      if (!sock || connectionStatus === 'close') {
+        console.log(">>> [API] Booting engine for pairing...");
+        startWhatsAppBot().catch(console.error);
       }
 
-      // 2. Wait for QR/Auth state (Baileys readiness)
+      // 3. Wait for readiness
       let wait = 0;
-      while (!lastQR && !sock?.user && wait < 60) {
-        await new Promise(r => setTimeout(r, 500));
+      while (!lastQR && !sock?.user && wait < 45) {
+        await new Promise(r => setTimeout(r, 1000));
         wait++;
       }
 
-      if (sock?.user) return res.status(400).json({ success: false, error: "Already connected." });
+      if (sock?.user) return res.status(400).json({ success: false, error: "Logged in automatically." });
       if (!lastQR || !sock) throw new Error("Connection failed to warm up. Please refresh and try again.");
 
-      // 3. Request Code
-      console.log(`Generating code for ${phoneNumber}...`);
-      await new Promise(r => setTimeout(r, 2000)); // Stabilization
-      const code = await sock.requestPairingCode(phoneNumber.replace(/\D/g, ''));
+      // 4. Request Pairing
+      console.log(`>>> [API] Generating code for: ${formattedNumber}`);
+      await new Promise(r => setTimeout(r, 2000));
+      const code = await sock.requestPairingCode(formattedNumber);
       
-      console.log(`>>> Pairing Code Generated: ${code}`);
       res.json({ success: true, code });
     } catch (e: any) {
-      console.error("Pairing Error:", e);
-      res.status(500).json({ success: false, error: e.message || "Pairing process failed." });
+      console.error(">>> [API] Pairing Failed:", e);
+      res.status(500).json({ success: false, error: e.message || "Failed to generate pairing code." });
     }
   });
 
-  // API: Logout/Reset
   app.post('/api/whatsapp/logout', async (req, res) => {
     try {
+      console.log(">>> [API] Full Reset Sequence Initiated...");
       if (sock) {
         try { await sock.logout(); } catch(e){}
         try { sock.end(undefined); } catch(e){}
       }
+      
       connectionStatus = 'close';
       sock = null;
       lastQR = null;
 
-      // Wipe Firestore session
-      const snap = await getDocs(collection(db, 'whatsapp_sessions'));
+      // Wipe Firestore
+      const snap = await getDocs(collection(db, 'whatsapp_sessions_v2'));
       const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
+      snap.forEach(d => batch.delete(d.ref));
       await batch.commit();
 
       res.json({ success: true });
-      setTimeout(startWhatsAppBot, 2000);
+      setTimeout(startWhatsAppBot, 3000);
     } catch (e: any) {
+      console.error(">>> [API] Logout Error:", e);
       res.status(500).json({ success: false, error: e.message });
     }
   });
@@ -426,7 +429,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server live on port ${PORT}`);
+    console.log(`>>> [SERVER] Running on Port ${PORT}`);
     startWhatsAppBot().catch(console.error);
   });
 }
