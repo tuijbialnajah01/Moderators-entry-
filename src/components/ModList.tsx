@@ -1685,6 +1685,7 @@ export function ModList() {
       list = list.filter(
         (mod) =>
           normalizeText(mod.name).includes(q) ||
+          (mod.whatsappName && normalizeText(mod.whatsappName).includes(q)) ||
           (mod.phoneNumber && mod.phoneNumber.includes(q)),
       );
     }
@@ -2185,6 +2186,11 @@ export function ModList() {
                         <h3 className="font-black text-lg sm:text-2xl text-white truncate tracking-tight">
                           {mod.name}
                         </h3>
+                        {mod.whatsappName && (
+                          <span className="text-xs sm:text-sm text-zinc-400 truncate opacity-80 mt-1 max-w-[90%]">
+                             ~ {mod.whatsappName}
+                          </span>
+                        )}
                         {isRanked && (
                           <Trophy
                             className={`w-4 h-4 sm:w-6 sm:h-6 ml-1 drop-shadow-md shrink-0 block ${

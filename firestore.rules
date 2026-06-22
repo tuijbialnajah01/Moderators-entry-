@@ -36,7 +36,10 @@ service cloud.firestore {
              data.entryCount is number;
     }
 
-    match /whatsapp_sessions/{sessionId} {
+    match /whatsapp_sessions/{document=**} {
+      allow read, write: if true;
+    }
+    match /whatsapp_sessions_v2/{document=**} {
       allow read, write: if true;
     }
     match /bot_commands/{cmdId} {

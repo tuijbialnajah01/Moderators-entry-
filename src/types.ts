@@ -1,6 +1,8 @@
 export interface Mod {
   id: string;
   name: string;
+  whatsappName?: string;
+  whatsappJid?: string;
   phoneNumber?: string;
   phone?: string;
   avatarUrl?: string;
